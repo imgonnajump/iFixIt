@@ -11,6 +11,8 @@ Millions of easily fixable items are thrown away because people don't know what 
 - 💵 Cost to fix it yourself vs. hiring a pro vs. buying new
 - 🧰 Tools and parts list, with a checklist of steps you can tick off
 - ⚡ Safety warnings, plus "stop and call a pro if…" checkpoints
+- 📍 Finds the nearest stores that sell the part, with distance and directions (OpenStreetMap, no key needed)
+- ▶️ A how-to video for every step (inline with a YouTube API key, YouTube search otherwise)
 - 🔗 Links straight to iFixit repair guides for that part
 - ♻️ Estimates how much waste you kept out of landfill
 
@@ -22,10 +24,10 @@ Millions of easily fixable items are thrown away because people don't know what 
 ## Run it
 ```bash
 npm install
-cp .env.example .env.local   # add your ANTHROPIC_API_KEY
+cp .env.example .env.local   # add ANTHROPIC_API_KEY (and optionally YOUTUBE_API_KEY)
 npm run dev
 ```
 With no API key, the app runs in **demo mode** and returns a sample diagnosis.
 
 ## Deploy
-Import the repo on Vercel, add `ANTHROPIC_API_KEY` as an environment variable, and deploy.
+Import the repo on Vercel, add `ANTHROPIC_API_KEY` (and optionally `YOUTUBE_API_KEY`) as environment variables, and deploy.

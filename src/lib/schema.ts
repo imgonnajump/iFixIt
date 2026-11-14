@@ -1,4 +1,5 @@
 import * as z from "zod/v4";
+import { STORE_TYPES } from "./stores";
 
 export const DiagnosisSchema = z.object({
   can_diagnose: z
@@ -33,9 +34,15 @@ export const DiagnosisSchema = z.object({
       title: z.string(),
       detail: z.string(),
       caution: z.string().nullable(),
+      video_search: z
+        .string()
+        .describe("Short YouTube search query for a video showing exactly this step, e.g. 'how to remove toilet flapper'. Include the item type."),
     }),
   ),
   stop_and_call_pro_if: z.array(z.string()).describe("Signs during the repair that mean stop and get help"),
+  store_types: z
+    .array(z.enum(STORE_TYPES))
+    .describe("Kinds of local physical stores most likely to stock the parts and tools, best first (1-3). Empty if the parts are only sold online or by the manufacturer."),
   ifixit_search: z.string().describe("Best short search query for iFixit repair guides, e.g. 'toilet flapper replacement'"),
   waste_saved_kg: z.number().describe("Rough mass in kg of the item kept out of landfill by repairing instead of replacing"),
 });

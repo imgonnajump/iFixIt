@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { Diagnosis } from "@/lib/schema";
+import { NearbyStores } from "./NearbyStores";
+import { StepVideo } from "./StepVideo";
 
 const VERDICT = {
   easy_diy: {
@@ -248,6 +250,11 @@ export function Result({
         )}
       </Card>
 
+      {/* Nearby stores */}
+      {d.store_types.length > 0 && (d.parts.length > 0 || d.tools.length > 0) && (
+        <NearbyStores types={d.store_types} partName={d.parts[0]?.name ?? d.part_name} />
+      )}
+
       {/* Steps */}
       <Card title="Step by step" icon="📋" action={<span className="text-sm font-semibold text-orange-600">{done.size}/{d.steps.length}</span>}>
         <div className="mb-4 h-2 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
@@ -258,15 +265,13 @@ export function Result({
             const isDone = done.has(i);
             const isNext = !isDone && [...Array(i).keys()].every((j) => done.has(j));
             return (
-              <li key={i}>
-                <button
-                  type="button"
-                  onClick={() => toggleStep(i)}
-                  className={`flex w-full gap-3 rounded-2xl p-3 text-left transition ${
-                    isNext ? "bg-orange-50 ring-2 ring-orange-300 dark:bg-orange-950/40 dark:ring-orange-800" : "bg-stone-50 dark:bg-stone-800/50"
-                  }`}
-                  aria-pressed={isDone}
-                >
+              <li
+                key={i}
+                className={`rounded-2xl p-3 transition ${
+                  isNext ? "bg-orange-50 ring-2 ring-orange-300 dark:bg-orange-950/40 dark:ring-orange-800" : "bg-stone-50 dark:bg-stone-800/50"
+                }`}
+              >
+                <button type="button" onClick={() => toggleStep(i)} className="flex w-full gap-3 text-left" aria-pressed={isDone}>
                   <span
                     className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold transition ${
                       isDone ? "bg-emerald-500 text-white" : isNext ? "bg-orange-500 text-white" : "bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300"
@@ -284,6 +289,11 @@ export function Result({
                     )}
                   </span>
                 </button>
+                {s.video_search && !isDone && (
+                  <div className="pl-11">
+                    <StepVideo query={s.video_search} />
+                  </div>
+                )}
               </li>
             );
           })}
