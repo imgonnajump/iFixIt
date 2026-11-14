@@ -86,7 +86,10 @@ export async function POST(req: Request) {
     }
     if (error instanceof Anthropic.BadRequestError) {
       console.error("Bad request:", error.message);
-      return NextResponse.json({ error: "That image couldn't be processed." }, { status: 400 });
+      return NextResponse.json(
+        { error: "The AI service rejected the request. Check the server log (bad image, or API account out of credits)." },
+        { status: 400 },
+      );
     }
     if (error instanceof Anthropic.APIError) {
       console.error(`API error ${error.status}:`, error.message);
