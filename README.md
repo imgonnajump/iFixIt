@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FixCam 🔧
 
-## Getting Started
+**Snap a photo of anything broken. Get the exact part name, an honest "DIY or call a pro" verdict, costs, tools, and a step-by-step repair plan.**
 
-First, run the development server:
+Millions of easily fixable items are thrown away because people don't know what the broken part is called or whether fixing it is safe and cheap. FixCam answers both with one photo.
 
+## What it does
+- 📷 Take a photo (or upload one) of a leaky faucet, a frayed charger, a bike derailleur or a dashboard warning light
+- 🏷️ Names the exact part, plus the other names it's sold under
+- 🚦 Verdict: **Easy DIY / DIY with care / Call a pro**, with the reason
+- 💵 Cost to fix it yourself vs. hiring a pro vs. buying new
+- 🧰 Tools and parts list, with a checklist of steps you can tick off
+- ⚡ Safety warnings, plus "stop and call a pro if…" checkpoints
+- 🔗 Links straight to iFixit repair guides for that part
+- ♻️ Estimates how much waste you kept out of landfill
+
+## Tech
+- Next.js 15 (App Router) + Tailwind
+- Claude vision (`claude-opus-5-5`) through the Anthropic TypeScript SDK, with structured outputs (a Zod schema) so the UI always gets valid JSON
+- Photos are downscaled in the browser before upload, which keeps requests fast on a phone
+
+## Run it
 ```bash
+npm install
+cp .env.example .env.local   # add your ANTHROPIC_API_KEY
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
+With no API key, the app runs in **demo mode** and returns a sample diagnosis.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy
+Import the repo on Vercel, add `ANTHROPIC_API_KEY` as an environment variable, and deploy.
