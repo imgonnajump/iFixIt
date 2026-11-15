@@ -19,12 +19,14 @@ export function ProfilePanel({
   setProfile,
   fixes,
   visits,
+  coins,
   compact = false,
 }: {
   profile: Profile;
   setProfile: (p: Profile) => void;
   fixes: Fix[];
   visits: { today: number; total: number };
+  coins: number;
   compact?: boolean;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -61,6 +63,9 @@ export function ProfilePanel({
           <p className="truncate font-extrabold leading-tight">{profile.name}</p>
           <p className="flex items-center gap-1 text-xs muted">
             <PixelIcon name={mood.icon} size={12} /> Today is… {mood.label.toLowerCase()}
+            <span className="ml-1 flex items-center gap-0.5 font-bold text-[var(--ink)]">
+              <PixelIcon name="coin" size={12} /> {coins}
+            </span>
           </p>
         </div>
         <button type="button" onClick={open} className="btn btn-sm">
@@ -74,7 +79,7 @@ export function ProfilePanel({
   return (
     <aside aria-label="Your profile" className="flex h-full flex-col gap-3">
       <p className="font-pixel text-[11px] muted">
-        TODAY <span className="text-[var(--accent)]">{visits.today}</span> | TOTAL {visits.total}
+        TODAY <span className="text-[var(--accent-text)]">{visits.today}</span> | TOTAL {visits.total}
       </p>
       <div className="flex items-center gap-2 border-y border-dashed border-[var(--line)] py-1.5 text-sm">
         <span className="font-pixel text-[11px] text-[var(--tab-text)]">TODAY IS..</span>
@@ -102,6 +107,9 @@ export function ProfilePanel({
           <dt className="text-[11px] muted">kept</dt>
         </div>
       </dl>
+      <p className="flex items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-[var(--line)] py-1.5 font-extrabold">
+        <PixelIcon name="coin" size={16} /> {coins} coins
+      </p>
       {latest.length > 0 && (
         <div>
           <p className="font-pixel mb-1 text-[11px] muted">RECENT FIXES</p>

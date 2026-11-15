@@ -61,7 +61,7 @@ export function ProHelp({
               <div className="min-w-0 flex-1">
                 <p className="font-bold">
                   {o.who}
-                  {o === budgetPick && <span className="stamp ml-2 align-middle text-[var(--accent)]">budget pick</span>}
+                  {o === budgetPick && <span className="stamp ml-2 align-middle text-[var(--accent-text)]">budget pick</span>}
                 </p>
                 <p className="text-sm muted">{o.good_for}</p>
               </div>

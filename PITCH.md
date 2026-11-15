@@ -92,6 +92,6 @@ Making the highlights land on the right spot. Our first version asked for coordi
 | Criterion | Evidence |
 |---|---|
 | Technical execution | A three-stage vision pipeline with typed structured outputs; a measured, reproducible accuracy benchmark; graceful fallbacks (demo mode, Google Maps fallback, a hidden iFixit strip on failure) |
-| Creativity & novelty | A walkable pixel house as the way in, highlights on *your* photo, a "Check my work" repair coach, hands-free voice mode, Fixed Wrapped |
+| Creativity & novelty | A walkable pixel house you decorate with coins earned from real repairs, highlights on *your* photo, a "Check my work" repair coach, hands-free voice mode, Fixed Wrapped |
 | Impact & utility | Real costs and savings, a cheapest-first "who can fix it" ladder, a no-tools mode with household stand-ins, honest safety verdicts, local stores and pros, a fix diary, answers in your language |
 | Presentation & polish | A hand-made pixel and binder look (no generic AI template), dark mode, 0 axe accessibility violations, an installable app, and a tight 3-minute demo with a backup plan |

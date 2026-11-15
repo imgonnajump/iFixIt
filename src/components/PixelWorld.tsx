@@ -19,7 +19,9 @@ import {
   walkable,
   type WorldObject,
 } from "@/lib/pixel/world";
+import { blockedBy, canPlace, decorAt, drawDecor, ITEM, type DecorId, type House, type Placed } from "@/lib/house";
 import type { Avatar } from "@/lib/profile";
+import { HouseShop } from "./HouseShop";
 import { PixelIcon } from "./PixelIcon";
 
 const W = COLS * TILE;
@@ -33,10 +35,16 @@ export function PixelWorld({
   avatar,
   active = true,
   onPick,
+  house,
+  setHouse,
+  coins,
 }: {
   avatar: Avatar;
   active?: boolean;
   onPick: (o: WorldObject, issue: string) => void;
+  house: House;
+  setHouse: (h: House) => void;
+  coins: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const staticRef = useRef<HTMLCanvasElement | null>(null);
@@ -47,12 +55,31 @@ export function PixelWorld({
   const raf = useRef(0);
   const avatarRef = useRef(avatar);
   avatarRef.current = avatar;
+  const houseRef = useRef(house);
+  const blockedRef = useRef<Set<number>>(blockedBy(house.placed));
+  const ghost = useRef<[number, number] | null>(null);
+  const [decorating, setDecorating] = useState(false);
+  const [placing, setPlacing] = useState<DecorId | null>(null);
+  const placingRef = useRef<DecorId | null>(null);
+  placingRef.current = placing;
+  const [picked, setPicked] = useState<Placed | null>(null);
+  const pickedRef = useRef<Placed | null>(null);
+  pickedRef.current = picked;
+  const [message, setMessage] = useState("");
+
+  // Rebuild the static layer and walking rules whenever the house changes.
+  useEffect(() => {
+    houseRef.current = house;
+    blockedRef.current = blockedBy(house.placed);
+    staticRef.current = null;
+  }, [house]);
 
   const [selected, setSelected] = useState<WorldObject | null>(null);
   const [near, setNear] = useState<WorldObject | null>(null);
   const [room, setRoom] = useState<string>("Hallway");
   const [other, setOther] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
+  const worldRef = useRef<HTMLDivElement>(null);
 
   const facing = useCallback((): WorldObject | null => {
     const p = player.current;
@@ -76,7 +103,10 @@ export function PixelWorld({
         const s = document.createElement("canvas");
         s.width = W;
         s.height = H;
-        drawHouse(s.getContext("2d")!);
+        const h = houseRef.current;
+        drawHouse(s.getContext("2d")!, h.wallpaper, (sctx) => {
+          for (const d of h.placed) if (ITEM[d.item].walkable && d.item !== "vacuum") drawDecor(sctx, d.item, d.x * TILE, d.y * TILE);
+        });
         staticRef.current = s;
       }
       ctx.imageSmoothingEnabled = false;
@@ -108,8 +138,32 @@ export function PixelWorld({
         ctx.fillRect(bx + 3, by + 7, 2, 1);
       }
 
+      // decorations that move or stand up (drawn every frame)
+      const live = houseRef.current.placed.filter((d) => !ITEM[d.item].walkable || d.item === "vacuum");
+      for (const d of live) drawDecor(ctx, d.item, d.x * TILE, d.y * TILE, now);
+      if (pickedRef.current) {
+        const d = pickedRef.current, it = ITEM[d.item];
+        ctx.strokeStyle = "#7048e8";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(d.x * TILE + 1, d.y * TILE + 1, it.w * TILE - 2, it.h * TILE - 2);
+      }
+
       const frame = p.moving ? Math.floor(now / 110) % 2 : 0;
       drawAvatar(ctx, avatarRef.current, Math.round(px), Math.round(py) - 4, p.dir, frame);
+      for (const d of live) if (d.y > p.y && Math.abs(d.x - p.x) <= 1) drawDecor(ctx, d.item, d.x * TILE, d.y * TILE, now);
+
+      // placement preview
+      const item = placingRef.current;
+      if (item && ghost.current) {
+        const [gx, gy] = ghost.current;
+        const ok = canPlace(houseRef.current, item, gx, gy, [p.x, p.y]).ok;
+        ctx.globalAlpha = 0.65;
+        drawDecor(ctx, item, gx * TILE, gy * TILE, now);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = ok ? "#2b8a3e" : "#e03131";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(gx * TILE + 1, gy * TILE + 1, ITEM[item].w * TILE - 2, ITEM[item].h * TILE - 2);
+      }
 
       // Re-draw tall furniture in front of the player when they walk behind it.
       const sx = Math.round(px), sy = Math.round(py) - 4;
@@ -168,7 +222,7 @@ export function PixelWorld({
     target.current = null;
     if (p.moving) return;
     const [dx, dy] = DIRS[dir];
-    if (walkable(p.x + dx, p.y + dy)) stepTo(p.x + dx, p.y + dy);
+    if (walkable(p.x + dx, p.y + dy, blockedRef.current)) stepTo(p.x + dx, p.y + dy);
     else {
       p.dir = dir;
       setNear(facing());
@@ -177,8 +231,8 @@ export function PixelWorld({
 
   const goTo = useCallback((o: WorldObject) => {
     const p = player.current;
-    const spots = standSpots(o);
-    const route = findPath(p.x, p.y, spots);
+    const spots = standSpots(o, blockedRef.current);
+    const route = findPath(p.x, p.y, spots, blockedRef.current);
     if (!route) return;
     target.current = o;
     if (route.length === 0) {
@@ -214,8 +268,46 @@ export function PixelWorld({
     return [Math.floor(((e.clientX - rect.left) / rect.width) * COLS), Math.floor(((e.clientY - rect.top) / rect.height) * ROWS)];
   }
 
+  function placeAt(tx: number, ty: number) {
+    const item = placingRef.current;
+    if (!item) return;
+    const p = player.current;
+    const res = canPlace(houseRef.current, item, tx, ty, [p.x, p.y]);
+    if (!res.ok) {
+      setMessage(`Can't put it there: ${res.reason}`);
+      return;
+    }
+    const h = houseRef.current;
+    const left = (h.inventory[item] ?? 0) - 1;
+    setHouse({ ...h, placed: [...h.placed, { uid: Math.random().toString(36).slice(2, 9), item, x: tx, y: ty }], inventory: { ...h.inventory, [item]: left } });
+    setMessage(`Placed the ${ITEM[item].name.toLowerCase()}!`);
+    if (left <= 0) setPlacing(null);
+  }
+
+  function placeInFront() {
+    const p = player.current;
+    const [dx, dy] = DIRS[p.dir];
+    placeAt(p.x + dx, p.y + dy);
+  }
+
+  function pickUp(d: Placed) {
+    const h = houseRef.current;
+    setHouse({ ...h, placed: h.placed.filter((x) => x.uid !== d.uid), inventory: { ...h.inventory, [d.item]: (h.inventory[d.item] ?? 0) + 1 } });
+    setPicked(null);
+    setMessage(`Picked up the ${ITEM[d.item].name.toLowerCase()}.`);
+  }
+
   function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     const [tx, ty] = tileFromEvent(e);
+    if (placingRef.current) return placeAt(tx, ty);
+    if (decorating) {
+      const d = decorAt(houseRef.current.placed, tx, ty) ?? decorAt(houseRef.current.placed, tx, ty + 1);
+      if (d) {
+        setPicked(d);
+        setMessage(`${ITEM[d.item].name} selected.`);
+        return;
+      }
+    }
     const o = objectAt(tx, ty) ?? objectAt(tx, ty + 1); // tall things are drawn a bit above their tile
     if (o) return goTo(o);
     const p = player.current;
@@ -232,6 +324,11 @@ export function PixelWorld({
 
   function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
     const [tx, ty] = tileFromEvent(e);
+    if (placingRef.current) {
+      ghost.current = [tx, ty];
+      e.currentTarget.style.cursor = "copy";
+      return;
+    }
     const o = objectAt(tx, ty) ?? objectAt(tx, ty + 1);
     hover.current = o && !o.decor ? o : null;
     e.currentTarget.style.cursor = hover.current ? "pointer" : "default";
@@ -243,9 +340,12 @@ export function PixelWorld({
     if (map[k]) {
       e.preventDefault();
       move(map[k]);
+    } else if (k === "escape" && placingRef.current) {
+      setPlacing(null);
     } else if (k === "enter" || k === " " || k === "e") {
       e.preventDefault();
-      interact();
+      if (placingRef.current) placeInFront();
+      else interact();
     }
   }
 
@@ -255,8 +355,26 @@ export function PixelWorld({
         <h2 id="world-title" className="title">
           <PixelIcon name="house" /> My home
         </h2>
-        <span className="font-pixel text-xs muted" aria-live="polite">
-          {room}
+        <span className="flex items-center gap-2">
+          <span className="font-pixel text-xs muted" aria-live="polite">
+            {room}
+          </span>
+          <span className="chip font-bold" aria-label={`${coins} coins`}>
+            <PixelIcon name="coin" size={14} /> {coins}
+          </span>
+          <button
+            type="button"
+            className={`btn btn-sm ${decorating ? "btn-primary" : ""}`}
+            aria-pressed={decorating}
+            onClick={() => {
+              setDecorating((v) => !v);
+              setPlacing(null);
+              setPicked(null);
+              setMessage("");
+            }}
+          >
+            <PixelIcon name="star" size={14} /> {decorating ? "Done" : "Decorate"}
+          </button>
         </span>
       </div>
 
@@ -264,7 +382,7 @@ export function PixelWorld({
         Walk to the thing that&apos;s broken and press <kbd className="stamp">E</kbd> (or tap it). Move with the arrow keys / WASD, or tap the floor.
       </p>
 
-      <div className="relative overflow-hidden rounded-lg border-2 border-[var(--ink)]" role="group" tabIndex={0} onKeyDown={onKeyDown} aria-label="Pixel home. Use arrow keys to walk and E to inspect. A list of every room and object follows below.">
+      <div ref={worldRef} className="relative overflow-hidden rounded-lg border-2 border-[var(--ink)]" role="group" tabIndex={0} onKeyDown={onKeyDown} aria-label="Pixel home. Use arrow keys to walk and E to inspect. A list of every room and object follows below.">
         <canvas
           ref={canvasRef}
           width={W}
@@ -275,7 +393,20 @@ export function PixelWorld({
           onPointerLeave={() => (hover.current = null)}
           aria-hidden
         />
-        {near && !selected && (
+        {placing && (
+          <div className="absolute inset-x-2 top-2 flex items-center justify-between gap-2 rounded-md border-2 border-[var(--ink)] bg-[var(--paper)] px-2 py-1 text-xs font-bold">
+            <span>Tap a spot to place the {ITEM[placing].name.toLowerCase()}</span>
+            <span className="flex gap-1">
+              <button type="button" className="btn btn-sm px-2 text-xs" onClick={placeInFront}>
+                Place in front of me
+              </button>
+              <button type="button" className="btn btn-sm px-2 text-xs" onClick={() => setPlacing(null)}>
+                Cancel
+              </button>
+            </span>
+          </div>
+        )}
+        {near && !selected && !decorating && (
           <button type="button" onClick={interact} className="btn btn-sm btn-primary absolute bottom-2 left-1/2 -translate-x-1/2 shadow-lg">
             Inspect {near.name.toLowerCase()}
           </button>
@@ -297,7 +428,28 @@ export function PixelWorld({
         </button>
       </div>
 
-      {selected && (
+      {decorating && (
+        <HouseShop
+          house={house}
+          setHouse={setHouse}
+          coins={coins}
+          placing={placing}
+          onPlace={(id) => {
+            setPlacing(id);
+            setPicked(null);
+            setMessage("");
+            // bring the house back into view so you can pick a spot right away
+            const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            worldRef.current?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+            worldRef.current?.focus({ preventScroll: true });
+          }}
+          picked={picked}
+          onPickUp={pickUp}
+          message={message}
+        />
+      )}
+
+      {selected && !decorating && (
         <div ref={cardRef} tabIndex={-1} className="card pop p-4" role="region" aria-label={`${selected.name}: what's wrong?`}>
           <div className="flex items-start gap-3">
             <ObjectThumb o={selected} />

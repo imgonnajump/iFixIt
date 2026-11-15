@@ -2,50 +2,58 @@
 
 /* ---------- Theme: a paper binder on a desk ---------- */
 :root {
-  --desk: #e7e1d3;
-  --paper: #fdfbf6;
-  --paper-2: #f6f1e6;
-  --ink: #2a2520;
-  --muted: #6a6157;
-  --line: #d9cfbd;
-  --tab: #1d6f80;
-  --tab-text: #1d6f80;
+  --desk: #9fe0ff;
+  --desk-dot: rgb(255 255 255 / 0.65);
+  --paper: #fffdf6;
+  --paper-2: #fff3d6;
+  --ink: #2a2140;
+  --muted: #5d5670;
+  --line: #d8c6ef;
+  --tab: #0b7285;
+  --tab-text: #6741d9;
   --tab-ink: #ffffff;
-  --accent: #c2410c;
-  --accent-ink: #ffffff;
-  --accent-soft: #fdebd8;
-  --good: #2b7a3d;
-  --good-soft: #e3f3e3;
-  --warn: #9a5b00;
-  --warn-soft: #fff2d6;
-  --bad: #b42323;
-  --bad-soft: #fde6e4;
-  --link: #145da0;
-  --focus: #145da0;
+  --accent: #ff8a3d;
+  --accent-ink: #2a2140;
+  --accent-text: #c2410c;
+  --accent-soft: #ffe6cc;
+  --good: #237032;
+  --good-soft: #d3f9d8;
+  --warn: #9c5700;
+  --warn-soft: #fff3bf;
+  --bad: #c92a2a;
+  --bad-soft: #ffe3e3;
+  --link: #1c5fd4;
+  --focus: #7048e8;
+  --tab-home: #ffd43b;
+  --tab-fix: #ff8a3d;
+  --tab-diary: #63e6be;
+  --tab-wrapped: #f783ac;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --desk: #141210;
-    --paper: #1f1c18;
-    --paper-2: #29251f;
-    --ink: #f3eee4;
-    --muted: #b3a998;
-    --line: #463f35;
-    --tab: #1d6f80;
-    --tab-text: #7fcfdd;
+    --desk: #1b1533;
+    --desk-dot: rgb(255 255 255 / 0.08);
+    --paper: #241e3b;
+    --paper-2: #2f284d;
+    --ink: #f4f0ff;
+    --muted: #c3bbe0;
+    --line: #4d4475;
+    --tab: #0b7285;
+    --tab-text: #b9a3ff;
     --tab-ink: #ffffff;
-    --accent: #f08a4b;
-    --accent-ink: #1a0f06;
-    --accent-soft: #3a2415;
-    --good: #7fd18f;
-    --good-soft: #1c3121;
-    --warn: #f0b85a;
-    --warn-soft: #382a12;
-    --bad: #ff8b80;
-    --bad-soft: #3a1c1a;
-    --link: #8cc4ff;
-    --focus: #8cc4ff;
+    --accent: #ff9a52;
+    --accent-ink: #1d1530;
+    --accent-text: #ffb37a;
+    --accent-soft: #43301f;
+    --good: #8ce99a;
+    --good-soft: #1f3a2a;
+    --warn: #ffd43b;
+    --warn-soft: #3b3315;
+    --bad: #ff8787;
+    --bad-soft: #47222b;
+    --link: #91c3ff;
+    --focus: #b9a3ff;
   }
 }
 
@@ -75,8 +83,8 @@ html {
 }
 body {
   background-color: var(--desk);
-  background-image: radial-gradient(color-mix(in srgb, var(--ink) 7%, transparent) 1px, transparent 1px);
-  background-size: 14px 14px;
+  background-image: radial-gradient(var(--desk-dot) 2px, transparent 2px);
+  background-size: 22px 22px;
   color: var(--ink);
   font-family: var(--font-body), system-ui, sans-serif;
   font-size: 16px;
@@ -155,9 +163,12 @@ body {
   font-weight: 700;
   padding: 0.55rem 0.9rem;
   box-shadow: 0 3px 0 var(--ink);
-  transition: transform 80ms ease, box-shadow 80ms ease;
+  transition: transform 80ms ease, box-shadow 80ms ease, filter 120ms ease;
   min-height: 44px;
   white-space: nowrap;
+}
+.btn:hover {
+  filter: brightness(1.04) saturate(1.1);
 }
 .btn:active {
   transform: translateY(2px);

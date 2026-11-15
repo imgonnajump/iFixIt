@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { newId, WHO, type Fix, type Who } from "@/lib/fixlog";
+import { coinsFor } from "@/lib/house";
 import { cleanBox, type Box } from "@/lib/image";
 import { midpoint, savings } from "@/lib/money";
 import type { IconName } from "@/lib/pixel/icons";
@@ -45,6 +46,7 @@ export function Result({
   const [have, setHave] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
   const [logged, setLogged] = useState<Who | null>(null);
+  const [earned, setEarned] = useState(0);
   const autoLogged = useRef(false);
   // Where each step's part is on the photo: undefined = still looking.
   const [marks, setMarks] = useState<Record<string, Box | null> | undefined>(undefined);
@@ -110,8 +112,10 @@ export function Result({
 
   function log(who: Who) {
     if (demo) return;
-    onLog(makeFix(who));
+    const fix = makeFix(who);
+    onLog(fix);
     setLogged(who);
+    setEarned(coinsFor(fix));
   }
 
   useEffect(() => {
@@ -346,7 +350,7 @@ export function Result({
                 })
               }
             />
-            <span className="font-pixel text-sm text-[var(--accent)]" aria-label={`${done.size} of ${d.steps.length} steps done`}>
+            <span className="font-pixel text-sm text-[var(--accent-text)]" aria-label={`${done.size} of ${d.steps.length} steps done`}>
               {done.size}/{d.steps.length}
             </span>
           </span>
@@ -419,7 +423,9 @@ export function Result({
           <div className="pop mt-4 rounded-lg border-2 border-[var(--good)] bg-[var(--good-soft)] p-4 text-center" role="status">
             <PixelIcon name="star" size={40} className="mx-auto" />
             <p className="mt-1 text-xl font-extrabold">You fixed it!</p>
-            <p className="text-sm">About {d.waste_saved_kg} kg kept out of landfill.{logged && !demo ? " Saved to your diary." : ""}</p>
+            <p className="text-sm">
+              About {d.waste_saved_kg} kg kept out of landfill.{logged && !demo ? ` Saved to your diary, +${earned} coins!` : ""}
+            </p>
           </div>
         )}
       </div>
@@ -449,7 +455,7 @@ export function Result({
           </h3>
           {logged ? (
             <p className="text-sm">
-              <span className="stamp text-[var(--good)]">saved</span> Added to your diary as &ldquo;{WHO[logged]}&rdquo;.
+              <span className="stamp text-[var(--good)]">saved</span> Added to your diary as &ldquo;{WHO[logged]}&rdquo;. You earned <b>{earned} coins</b> to decorate your house!
             </p>
           ) : (
             <>

@@ -65,13 +65,13 @@ export const OBJECTS: WorldObject[] = [
   { id: "dryer", name: "Dryer", room: "utility", x: 19, y: 1, w: 1, h: 1, issues: ["Not heating", "Squeaks", "Takes forever to dry", "Drum won't turn"] },
   { id: "water-heater", name: "Water heater", room: "utility", x: 22, y: 1, w: 1, h: 2, issues: ["No hot water", "Leaking at the bottom", "Rumbling noise", "Pilot light out"] },
   { id: "lamp", name: "Floor lamp", room: "living", x: 1, y: 10, w: 1, h: 1, issues: ["Won't turn on", "Flickers", "Switch is loose", "Wobbly"] },
-  { id: "tv", name: "TV", room: "living", x: 4, y: 10, w: 2, h: 1, issues: ["No picture", "No sound", "Remote doesn't work", "Cracked screen"] },
+  { id: "tv", name: "TV", room: "living", x: 6, y: 10, w: 2, h: 1, issues: ["No picture", "No sound", "Remote doesn't work", "Cracked screen"] },
   { id: "outlet", name: "Outlet & charger", room: "living", x: 8, y: 10, w: 1, h: 1, issues: ["Charger cable frayed", "Phone won't charge", "Outlet is loose", "Outlet sparks"] },
   { id: "couch", name: "Couch", room: "living", x: 3, y: 13, w: 3, h: 1, issues: ["Ripped cushion", "Broken leg", "Saggy seat", "Recliner stuck"] },
   { id: "plant", name: "Plant", room: "living", x: 9, y: 14, w: 1, h: 1, issues: [], decor: true },
-  { id: "bed", name: "Bed", room: "bedroom", x: 11, y: 10, w: 2, h: 3, issues: ["Frame squeaks", "Slat broken", "Wobbly headboard"] },
-  { id: "nightstand", name: "Phone on nightstand", room: "bedroom", x: 13, y: 10, w: 1, h: 1, issues: ["Cracked screen", "Battery drains fast", "Charging port loose", "Buttons stuck"] },
-  { id: "desk", name: "Desk & laptop", room: "bedroom", x: 15, y: 10, w: 2, h: 1, issues: ["Laptop hinge loose", "Keyboard key broken", "Laptop overheats", "Won't charge"] },
+  { id: "bed", name: "Bed", room: "bedroom", x: 14, y: 11, w: 2, h: 3, issues: ["Frame squeaks", "Slat broken", "Wobbly headboard"] },
+  { id: "nightstand", name: "Phone on nightstand", room: "bedroom", x: 16, y: 11, w: 1, h: 1, issues: ["Cracked screen", "Battery drains fast", "Charging port loose", "Buttons stuck"] },
+  { id: "desk", name: "Desk & laptop", room: "bedroom", x: 11, y: 13, w: 2, h: 1, issues: ["Laptop hinge loose", "Keyboard key broken", "Laptop overheats", "Won't charge"] },
   { id: "workbench", name: "Workbench & tools", room: "garage", x: 20, y: 10, w: 3, h: 1, issues: ["Drill won't hold a charge", "Rusty tools", "Extension cord damaged"] },
   { id: "bike", name: "Bike", room: "garage", x: 18, y: 12, w: 2, h: 1, issues: ["Flat tire", "Chain skips gears", "Brakes squeal", "Chain fell off"] },
   { id: "mower", name: "Lawn mower", room: "garage", x: 21, y: 13, w: 1, h: 1, issues: ["Won't start", "Cuts unevenly", "Pull cord stuck", "Smokes"] },
@@ -89,16 +89,18 @@ export function objectAt(x: number, y: number): WorldObject | undefined {
   return OBJECTS.find((o) => x >= o.x && x < o.x + o.w && y >= o.y && y < o.y + o.h);
 }
 
-export function walkable(x: number, y: number): boolean {
+// `extra` = tiles blocked by placed decorations (y * COLS + x).
+export function walkable(x: number, y: number, extra?: Set<number>): boolean {
   if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return false;
   if (MAP[y][x] === "#") return false;
+  if (extra?.has(y * COLS + x)) return false;
   return !objectAt(x, y);
 }
 
 // Breadth-first path from (sx, sy) to the nearest of `goals`. Returns the tiles to step through.
-export function findPath(sx: number, sy: number, goals: [number, number][]): [number, number][] | null {
+export function findPath(sx: number, sy: number, goals: [number, number][], extra?: Set<number>): [number, number][] | null {
   const key = (x: number, y: number) => y * COLS + x;
-  const goalSet = new Set(goals.filter(([x, y]) => walkable(x, y)).map(([x, y]) => key(x, y)));
+  const goalSet = new Set(goals.filter(([x, y]) => walkable(x, y, extra)).map(([x, y]) => key(x, y)));
   if (goalSet.size === 0) return null;
   const prev = new Map<number, number>();
   const q: [number, number][] = [[sx, sy]];
@@ -116,7 +118,7 @@ export function findPath(sx: number, sy: number, goals: [number, number][]): [nu
     }
     for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
       const nx = x + dx, ny = y + dy;
-      if (walkable(nx, ny) && !prev.has(key(nx, ny))) {
+      if (walkable(nx, ny, extra) && !prev.has(key(nx, ny))) {
         prev.set(key(nx, ny), key(x, y));
         q.push([nx, ny]);
       }
@@ -126,13 +128,13 @@ export function findPath(sx: number, sy: number, goals: [number, number][]): [nu
 }
 
 // Free tiles next to an object, where the player can stand to use it.
-export function standSpots(o: WorldObject): [number, number][] {
+export function standSpots(o: WorldObject, extra?: Set<number>): [number, number][] {
   const spots: [number, number][] = [];
   for (let x = o.x - 1; x <= o.x + o.w; x++) {
     for (let y = o.y - 1; y <= o.y + o.h; y++) {
       const inside = x >= o.x && x < o.x + o.w && y >= o.y && y < o.y + o.h;
       const diagonal = (x < o.x || x >= o.x + o.w) && (y < o.y || y >= o.y + o.h);
-      if (!inside && !diagonal && walkable(x, y)) spots.push([x, y]);
+      if (!inside && !diagonal && walkable(x, y, extra)) spots.push([x, y]);
     }
   }
   return spots;
@@ -146,38 +148,38 @@ function r(ctx: CanvasRenderingContext2D, c: string, x: number, y: number, w: nu
   ctx.fillRect(x, y, w, h);
 }
 
-const WALLPAPER: Record<string, string> = { b: "#cfe6ee", k: "#f3e0b9", u: "#d5d6cf", l: "#d8e8c8", r: "#f3d4dc", g: "#c8c1b4", ".": "#e9d7bf" };
+export const WALLPAPER: Record<string, string> = { b: "#a5d8ff", k: "#ffe066", u: "#d0bfff", l: "#b2f2bb", r: "#fcc2d7", g: "#ffd8a8", ".": "#ffec99" };
 
 function drawFloor(ctx: CanvasRenderingContext2D, ch: string, x: number, y: number, tx: number, ty: number) {
   switch (ch) {
     case "b": // small white tiles
-      r(ctx, "#eef4f6", x, y, 16, 16);
-      r(ctx, "#cdd9de", x, y + 7, 16, 1);
-      r(ctx, "#cdd9de", x, y + 15, 16, 1);
-      r(ctx, "#cdd9de", x + 7, y, 1, 16);
-      r(ctx, "#cdd9de", x + 15, y, 1, 16);
+      r(ctx, "#f1f8ff", x, y, 16, 16);
+      r(ctx, "#bfe0ff", x, y + 7, 16, 1);
+      r(ctx, "#bfe0ff", x, y + 15, 16, 1);
+      r(ctx, "#bfe0ff", x + 7, y, 1, 16);
+      r(ctx, "#bfe0ff", x + 15, y, 1, 16);
       break;
     case "k": // checker
-      r(ctx, "#f5ead6", x, y, 16, 16);
-      r(ctx, "#d9a37c", x, y, 8, 8);
-      r(ctx, "#d9a37c", x + 8, y + 8, 8, 8);
+      r(ctx, "#fff4e0", x, y, 16, 16);
+      r(ctx, "#ff8a65", x, y, 8, 8);
+      r(ctx, "#ff8a65", x + 8, y + 8, 8, 8);
       break;
     case "u":
     case "g": // concrete
-      r(ctx, ch === "u" ? "#c9ccc8" : "#b9b5ad", x, y, 16, 16);
+      r(ctx, ch === "u" ? "#cfd8ff" : "#c9c2b6", x, y, 16, 16);
       if ((tx * 7 + ty * 3) % 5 === 0) r(ctx, "#a9a59d", x + 4, y + 9, 2, 1);
       if ((tx + ty) % 4 === 0) r(ctx, "#a9a59d", x + 11, y + 3, 1, 1);
       if (ch === "g" && tx === 20 && ty === 12) r(ctx, "#8d8a84", x + 2, y + 5, 9, 5); // oil stain
       break;
     case "l": // carpet
-      r(ctx, "#9cb88a", x, y, 16, 16);
-      if ((tx + ty) % 2 === 0) r(ctx, "#8eab7c", x + 3, y + 3, 1, 1);
-      else r(ctx, "#8eab7c", x + 11, y + 10, 1, 1);
+      r(ctx, "#69db7c", x, y, 16, 16);
+      if ((tx + ty) % 2 === 0) r(ctx, "#51cf66", x + 3, y + 3, 1, 1);
+      else r(ctx, "#51cf66", x + 11, y + 10, 1, 1);
       break;
     case "r": // light wood
     case ".": {
-      const base = ch === "r" ? "#e4c39e" : "#cfa57a";
-      const seam = ch === "r" ? "#cfa883" : "#b88b60";
+      const base = ch === "r" ? "#ffd8a8" : "#e8a86b";
+      const seam = ch === "r" ? "#f4b77a" : "#c98546";
       r(ctx, base, x, y, 16, 16);
       r(ctx, seam, x, y + 4, 16, 1);
       r(ctx, seam, x, y + 9, 16, 1);
@@ -189,7 +191,7 @@ function drawFloor(ctx: CanvasRenderingContext2D, ch: string, x: number, y: numb
   }
 }
 
-export function drawHouse(ctx: CanvasRenderingContext2D) {
+export function drawHouse(ctx: CanvasRenderingContext2D, wallpaper: Partial<Record<string, string>> = {}, underlay?: (ctx: CanvasRenderingContext2D) => void) {
   for (let ty = 0; ty < ROWS; ty++) {
     for (let tx = 0; tx < COLS; tx++) {
       const ch = MAP[ty][tx];
@@ -201,13 +203,13 @@ export function drawHouse(ctx: CanvasRenderingContext2D) {
       const below = MAP[ty + 1]?.[tx];
       if (below && below !== "#") {
         // wall face with wallpaper and baseboard (3/4 view)
-        r(ctx, "#4b4038", x, y, 16, 4);
-        r(ctx, WALLPAPER[below] ?? "#ddd", x, y + 4, 16, 10);
+        r(ctx, "#5f3dc4", x, y, 16, 4);
+        r(ctx, wallpaper[below] ?? WALLPAPER[below] ?? "#ddd", x, y + 4, 16, 10);
         r(ctx, "#ffffff55", x, y + 4, 16, 1);
-        r(ctx, "#8a7764", x, y + 14, 16, 2);
+        r(ctx, "#845ef7", x, y + 14, 16, 2);
       } else {
-        r(ctx, "#4b4038", x, y, 16, 16);
-        r(ctx, "#5c4f45", x + 1, y + 1, 14, 14);
+        r(ctx, "#5f3dc4", x, y, 16, 16);
+        r(ctx, "#7048e8", x + 1, y + 1, 14, 14);
       }
     }
   }
@@ -220,13 +222,14 @@ export function drawHouse(ctx: CanvasRenderingContext2D) {
       }
     }
   }
+  underlay?.(ctx); // rugs and other floor decorations
   for (const o of OBJECTS) drawObject(ctx, o);
 }
 
 function counterBase(ctx: CanvasRenderingContext2D, x: number, y: number) {
   r(ctx, OUT, x, y + 2, 16, 14);
   r(ctx, "#e7d8bb", x, y + 3, 16, 4);
-  r(ctx, "#a47148", x, y + 7, 16, 8);
+  r(ctx, "#e8913a", x, y + 7, 16, 8);
   r(ctx, "#7a5232", x + 7, y + 8, 1, 6);
   r(ctx, "#d9c08f", x + 5, y + 10, 1, 1);
   r(ctx, "#d9c08f", x + 9, y + 10, 1, 1);
@@ -255,7 +258,7 @@ export function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, ox = o
       r(ctx, "#d7eef5", x + 5, y - 10, 6, 6);
       r(ctx, "#ffffff", x + 6, y - 9, 2, 1);
       r(ctx, OUT, x + 1, y + 2, 14, 13);
-      r(ctx, "#b98b5e", x + 2, y + 3, 12, 11);
+      r(ctx, "#f59f00", x + 2, y + 3, 12, 11);
       r(ctx, "#f7f9fa", x + 3, y + 3, 10, 5);
       r(ctx, "#bfe3ef", x + 5, y + 4, 6, 3);
       r(ctx, "#a8b0b5", x + 7, y + 2, 2, 2);
@@ -323,7 +326,7 @@ export function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, ox = o
       break;
     case "table":
       r(ctx, OUT, x + 2, y + 1, 28, 12);
-      r(ctx, "#c08b5c", x + 3, y + 2, 26, 9);
+      r(ctx, "#f2a65a", x + 3, y + 2, 26, 9);
       r(ctx, "#ffffff", x + 8, y + 4, 5, 4);
       r(ctx, "#f1f3f5", x + 19, y + 4, 5, 4);
       r(ctx, OUT, x + 4, y + 13, 2, 3);
@@ -388,9 +391,9 @@ export function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, ox = o
       break;
     case "couch":
       r(ctx, OUT, x + 1, y, 46, 16);
-      r(ctx, "#3d7a77", x + 2, y + 1, 44, 14);
-      r(ctx, "#4a8f8c", x + 6, y + 1, 36, 7);
-      r(ctx, "#3d7a77", x + 24, y + 1, 1, 7);
+      r(ctx, "#e64980", x + 2, y + 1, 44, 14);
+      r(ctx, "#f06595", x + 6, y + 1, 36, 7);
+      r(ctx, "#e64980", x + 24, y + 1, 1, 7);
       r(ctx, "#f6c344", x + 8, y + 2, 5, 4);
       break;
     case "plant":
@@ -405,21 +408,21 @@ export function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, ox = o
       r(ctx, "#8b5e3c", x + 2, y - 3, 28, 9);
       r(ctx, "#ffffff", x + 4, y + 7, 10, 7);
       r(ctx, "#ffffff", x + 18, y + 7, 10, 7);
-      r(ctx, "#e7a1b0", x + 2, y + 16, 28, 30);
-      r(ctx, "#f3c4cf", x + 2, y + 16, 28, 3);
-      r(ctx, "#d98a9b", x + 8, y + 27, 3, 3);
-      r(ctx, "#d98a9b", x + 20, y + 35, 3, 3);
+      r(ctx, "#74c0fc", x + 2, y + 16, 28, 30);
+      r(ctx, "#a5d8ff", x + 2, y + 16, 28, 3);
+      r(ctx, "#4dabf7", x + 8, y + 27, 3, 3);
+      r(ctx, "#4dabf7", x + 20, y + 35, 3, 3);
       break;
     case "nightstand":
       r(ctx, OUT, x + 2, y + 2, 12, 13);
-      r(ctx, "#a47148", x + 3, y + 3, 10, 11);
+      r(ctx, "#e8913a", x + 3, y + 3, 10, 11);
       r(ctx, "#7a5232", x + 3, y + 9, 10, 1);
       r(ctx, OUT, x + 5, y + 3, 5, 5);
       r(ctx, "#74c0fc", x + 6, y + 4, 3, 3);
       break;
     case "desk":
       r(ctx, OUT, x, y + 2, 32, 13);
-      r(ctx, "#c08b5c", x + 1, y + 3, 30, 11);
+      r(ctx, "#f2a65a", x + 1, y + 3, 30, 11);
       r(ctx, OUT, x + 9, y - 6, 14, 10);
       r(ctx, "#74c0fc", x + 10, y - 5, 12, 8);
       r(ctx, "#d0ebff", x + 11, y - 4, 3, 1);
@@ -438,7 +441,7 @@ export function drawObject(ctx: CanvasRenderingContext2D, o: WorldObject, ox = o
       r(ctx, OUT, x + 33, y - 11, 4, 1); // saw
       r(ctx, "#a8b0b5", x + 33, y - 10, 7, 4);
       r(ctx, OUT, x, y + 2, 48, 13);
-      r(ctx, "#a47148", x + 1, y + 3, 46, 5);
+      r(ctx, "#e8913a", x + 1, y + 3, 46, 5);
       r(ctx, "#7a5232", x + 1, y + 8, 46, 6);
       break;
     case "bike":

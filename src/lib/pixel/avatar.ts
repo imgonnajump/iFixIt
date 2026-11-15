@@ -13,7 +13,7 @@ function r(ctx: CanvasRenderingContext2D, c: string, x: number, y: number, w: nu
 export function drawAvatar(ctx: CanvasRenderingContext2D, a: Avatar, x: number, y: number, dir: Dir = "down", frame = 0) {
   const { skin, shirt, hairColor: hc } = a;
   const side = dir === "left" || dir === "right";
-  const flip = dir === "left";
+  const flip = dir === "right"; // the side view is drawn facing left
   const X = (px: number, w = 1) => (flip ? x + 16 - px - w : x + px);
 
   // shadow

@@ -8,17 +8,18 @@ import { PixelWorld } from "@/components/PixelWorld";
 import { ProfilePanel } from "@/components/ProfilePanel";
 import { WrappedCard } from "@/components/Wrapped";
 import { loadFixes, saveFixes, type Fix } from "@/lib/fixlog";
+import { coinBalance, EMPTY_HOUSE, loadHouse, saveHouse, type House } from "@/lib/house";
 import type { IconName } from "@/lib/pixel/icons";
 import { ROOMS } from "@/lib/pixel/world";
 import { countVisit, DEFAULT_PROFILE, loadProfile, saveProfile, type Profile } from "@/lib/profile";
 import { isWrappedSeason } from "@/lib/wrapped";
 
 type Tab = "home" | "fix" | "diary" | "wrapped";
-const TABS: { id: Tab; label: string; icon: IconName }[] = [
-  { id: "home", label: "Home", icon: "house" },
-  { id: "fix", label: "Fix it", icon: "camera" },
-  { id: "diary", label: "Diary", icon: "book" },
-  { id: "wrapped", label: "Wrapped", icon: "gift" },
+const TABS: { id: Tab; label: string; icon: IconName; color: string }[] = [
+  { id: "home", label: "Home", icon: "house", color: "var(--tab-home)" },
+  { id: "fix", label: "Fix it", icon: "camera", color: "var(--tab-fix)" },
+  { id: "diary", label: "Diary", icon: "book", color: "var(--tab-diary)" },
+  { id: "wrapped", label: "Wrapped", icon: "gift", color: "var(--tab-wrapped)" },
 ];
 
 export default function Home() {
@@ -27,12 +28,14 @@ export default function Home() {
   const [fixes, setFixesState] = useState<Fix[]>([]);
   const [visits, setVisits] = useState({ today: 1, total: 1 });
   const [place, setPlace] = useState<Place | null>(null);
+  const [house, setHouseState] = useState<House>(EMPTY_HOUSE);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
     setProfileState(loadProfile());
     setFixesState(loadFixes());
     setVisits(countVisit());
+    setHouseState(loadHouse());
   }, []);
 
   const setProfile = (p: Profile) => {
@@ -43,6 +46,11 @@ export default function Home() {
     setFixesState(f);
     saveFixes(f);
   };
+  const setHouse = (h: House) => {
+    setHouseState(h);
+    saveHouse(h);
+  };
+  const coins = coinBalance(fixes, house).balance;
   const logFix = (f: Fix) => setFixes([f, ...loadFixes().filter((x) => x.id !== f.id)]);
 
   function go(t: Tab) {
@@ -83,13 +91,14 @@ export default function Home() {
             tabIndex={active ? 0 : -1}
             onClick={() => go(t.id)}
             onKeyDown={(e) => onTabKey(e, i, vertical)}
+            style={active ? { boxShadow: `inset 4px 0 0 ${t.color}` } : { background: t.color }}
             className={
               vertical
                 ? `flex items-center gap-2 rounded-r-lg border border-l-0 px-3 py-2.5 text-left text-sm font-bold transition-all ${
-                    active ? "border-[var(--line)] bg-[var(--paper)] pl-4 text-[var(--ink)]" : "border-transparent bg-[var(--tab)] text-white hover:pl-4"
+                    active ? "border-[var(--line)] bg-[var(--paper)] pl-4 text-[var(--ink)]" : "border-[#2a2140] text-[#2a2140] hover:pl-4"
                   }`
                 : `flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-t-lg border border-b-0 px-1 py-2 text-sm font-bold ${
-                    active ? "border-[var(--line)] bg-[var(--paper)] text-[var(--ink)]" : "border-transparent bg-[var(--tab)] text-white"
+                    active ? "border-[var(--line)] bg-[var(--paper)] text-[var(--ink)]" : "border-[#2a2140] text-[#2a2140]"
                   }`
             }
           >
@@ -114,7 +123,7 @@ export default function Home() {
 
           <div className="page-dash p-2 sm:p-3 md:grid md:grid-cols-[230px_22px_1fr]">
             <div className="card hidden p-3 md:block">
-              <ProfilePanel profile={profile} setProfile={setProfile} fixes={fixes} visits={visits} />
+              <ProfilePanel profile={profile} setProfile={setProfile} fixes={fixes} visits={visits} coins={coins} />
             </div>
             <div className="rings hidden md:block" aria-hidden />
 
@@ -125,12 +134,12 @@ export default function Home() {
                   <p className="font-pixel truncate text-[11px] muted">fixcam / {tab}</p>
                 </div>
                 <p className="font-pixel shrink-0 text-[10px] muted md:hidden">
-                  TODAY <span className="text-[var(--accent)]">{visits.today}</span> | TOTAL {visits.total}
+                  TODAY <span className="text-[var(--accent-text)]">{visits.today}</span> | TOTAL {visits.total}
                 </p>
               </header>
 
               <aside aria-label="Your profile" className="card mb-2 p-2 md:hidden">
-                <ProfilePanel profile={profile} setProfile={setProfile} fixes={fixes} visits={visits} compact />
+                <ProfilePanel profile={profile} setProfile={setProfile} fixes={fixes} visits={visits} coins={coins} compact />
               </aside>
 
               <nav aria-label="Sections" className="sticky top-0 z-20 bg-[var(--paper)] pt-1 md:hidden">
@@ -142,6 +151,9 @@ export default function Home() {
                   <PixelWorld
                     avatar={profile.avatar}
                     active={tab === "home"}
+                    house={house}
+                    setHouse={setHouse}
+                    coins={coins}
                     onPick={(o, issue) => {
                       setPlace({ room: ROOMS[o.room].name, roomId: o.room, object: o.name, issue });
                       go("fix");

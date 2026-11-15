@@ -161,7 +161,7 @@ export function NearbyPlaces({
                   {s.hours && <p className="truncate text-xs muted">{s.hours}</p>}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="font-pixel text-sm font-bold text-[var(--accent)]">{formatDistance(s.distanceKm, miles)}</span>
+                  <span className="font-pixel text-sm font-bold text-[var(--accent-text)]">{formatDistance(s.distanceKm, miles)}</span>
                   <div className="flex gap-1">
                     {s.phone && (
                       <a
