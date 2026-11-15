@@ -5,11 +5,19 @@
 Millions of easily fixable things are thrown away because people don't know what the broken part is called, or whether fixing it is safe and cheap. A chatbot can give you instructions. FixCam watches you do the repair.
 
 ## What it does
+**Your fix house**
+- 🏠 A walkable pixel house (bathroom, kitchen, utility room, living room, bedroom, garage). Walk to the broken thing with the arrow keys / WASD, the on-screen pad, or tap-to-walk, then pick what's wrong. Every object is also in a plain list, so keyboard and screen-reader users never need the game.
+- 🧑‍🔧 An editable profile: name, mood, status and a pixel avatar you design (hair, skin, shirt, hat)
+- 📒 A fix diary: every repair is logged automatically, and you can add, edit or delete your own
+- 🎁 **Fixed Wrapped:** your year in repairs as story slides (fixes, $ saved, kg kept, your "repair persona", busiest month, toughest fix) with a shareable image. It unlocks every December, with a preview any time.
+
 **Diagnose**
 - 📷 One photo (plus an optional note) of a leaky faucet, a frayed charger, a bike derailleur or a dashboard warning light
 - 🏷️ The exact part name, plus the other names it's sold under
 - 🚦 An honest verdict: **Easy DIY / DIY with care / Call a pro**, with the reason
 - 💵 Cost to fix it yourself vs. hiring a pro vs. buying new, with "You could save $X"
+- 🪜 **Who can fix it, cheapest first:** free help (Repair Café, a handy friend), a budget handyman, a licensed pro, with typical prices and when each makes sense
+- 🧰 **No tools? No problem:** tell it whether you have a full toolbox, a few basics, or nothing at all. Every tool gets a household stand-in where one is safe, essential tools are marked, and it suggests where to borrow one.
 
 **Fix**
 - 🎯 **Each step highlights the part on your own photo** (a separate, measured localization pass; see [eval/](eval/README.md))
@@ -24,6 +32,7 @@ Millions of easily fixable things are thrown away because people don't know what
 - ♻️ **Your repair impact:** a running total of fixes, money saved and kg kept out of landfill
 - 🌍 Answers in the phone's language
 - 📱 Installable as a phone app
+- ♿ Keyboard and screen-reader friendly: real tabs, labeled controls, visible focus, reduced-motion support, and 0 axe violations in light and dark mode
 
 ## How it works
 ```

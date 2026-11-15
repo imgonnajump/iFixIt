@@ -1,4 +1,5 @@
 import * as z from "zod/v4";
+import { ROOM_IDS } from "./pixel/world";
 import { PRO_TYPES, STORE_TYPES } from "./stores";
 
 export const DiagnosisSchema = z.object({
@@ -22,7 +23,19 @@ export const DiagnosisSchema = z.object({
   pro_cost: z.string().describe("Approximate USD cost for a professional, e.g. '$120-200'"),
   replace_cost: z.string().describe("Approximate USD cost to buy a new item instead"),
   safety_warnings: z.array(z.string()).describe("Critical safety notes (electricity, gas, water, batteries, sharp edges). Empty if none."),
-  tools: z.array(z.string()).describe("Exact tools needed, e.g. 'Phillips #1 screwdriver'"),
+  tools: z
+    .array(
+      z.object({
+        name: z.string().describe("Exact tool, e.g. 'Phillips #1 screwdriver'"),
+        substitute: z.string().nullable().describe("A household item that can stand in for it, e.g. 'a coin or butter knife'. null if nothing safe works."),
+        essential: z.boolean().describe("true if the job truly can't be done without this tool (or its substitute)"),
+      }),
+    )
+    .describe("Tools needed"),
+  no_tools_tip: z
+    .string()
+    .nullable()
+    .describe("If the user has few or no tools: one or two sentences on how to do this with what's in a typical home, or the one cheap tool worth buying or borrowing (tool library, neighbor, hardware store). null otherwise."),
   parts: z.array(
     z.object({
       name: z.string(),
@@ -47,6 +60,17 @@ export const DiagnosisSchema = z.object({
   store_types: z
     .array(z.enum(STORE_TYPES))
     .describe("Kinds of local physical stores most likely to stock the parts and tools, best first (1-3). Empty if the parts are only sold online or by the manufacturer."),
+  help_options: z
+    .array(
+      z.object({
+        who: z.string().describe("Who can do it, e.g. 'Repair Café volunteer', 'Handyman', 'Licensed plumber'"),
+        tier: z.enum(["free", "budget", "standard", "premium"]),
+        cost: z.string().describe("Typical US price for this job, e.g. 'Free', '$60-120'"),
+        good_for: z.string().describe("One short sentence on when this is the right choice"),
+      }),
+    )
+    .describe("2-4 ways to get it fixed by someone else, cheapest first: free (Repair Café, a handy friend, warranty), budget (handyman, local repair shop), standard (licensed tradesperson or authorized shop), premium (manufacturer service, emergency call-out). Only include people who can do this job safely; never suggest unlicensed work on gas or mains wiring."),
+  room: z.enum([...ROOM_IDS, "other"]).describe("Where in a home this item usually is"),
   pro_types: z
     .array(z.enum(PRO_TYPES))
     .describe("Kinds of local professionals who could do this repair, best first (1-2). Add repair_cafe when volunteers could fix it (small appliances, electronics, clothing, bikes, furniture)."),

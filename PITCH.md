@@ -51,13 +51,13 @@ Every home has a drawer of "broken" things: a running toilet, a frayed charger, 
 | Time | Show | Say |
 |---|---|---|
 | 0:00–0:20 | Title slide | "Every home has a drawer of broken things. Most are $10 fixes, but people don't know what the part is called or whether it's safe, so it goes in the trash. We built FixCam." |
-| 0:20–0:45 | Tap **Take a photo**, shoot the item, tap a quick note chip, **Diagnose it** | "One photo. While it thinks, notice it's telling you what it's doing." |
+| 0:20–0:45 | In the pixel house, walk to the **bathroom** and tap the **toilet** → "Keeps running". Take the photo, pick **No tools at all**, **Diagnose it** | "This is my fix house. I walk to what's broken, tell it I have no tools, and snap one photo." |
 | 0:45–1:15 | Results: part name, green verdict, **You could save $X**, safety card | "It names the exact part, with the names hardware stores use, gives an honest verdict, and shows the money: fix it yourself for $8, or pay $150." |
 | 1:15–1:45 | Scroll to steps: the **highlight on our own photo** | "Every step highlights the part on *your* photo. We measured this: 13 out of 13 on our benchmark." |
 | 1:45–2:20 | Do the step, tap **📸 Check my work** → ✅ (or show ⚠️ first) | "Here's what a chatbot can't do: it checks your work. This is the moment it catches a mistake and boxes it on your photo." |
 | 2:20–2:35 | Tap **🎙️ Hands-free**, say "next" | "Your hands are wet, so just talk to it." |
 | 2:35–2:50 | Tap **Find stores near me** / the **Get a pro** card | "It tells you the closest store that stocks the part, and if it isn't safe, finds a plumber or a free Repair Café." |
-| 2:50–3:00 | Finish → 🎉 and the **impact card** | "Every fix adds up: money saved, and kilograms kept out of landfill. FixCam: don't toss it, fix it." |
+| 2:50–3:00 | Finish → it's logged in the **Diary** → open **Wrapped** (load the sample year beforehand) | "Every fix lands in my diary, and at the end of the year I get my Fixed Wrapped. I'm apparently The Plumbing Whisperer." |
 
 **If the Wi-Fi or the AI is slow:** switch to the backup tab, and say "Here's one we ran earlier" while the live one finishes.
 
@@ -92,6 +92,6 @@ Making the highlights land on the right spot. Our first version asked for coordi
 | Criterion | Evidence |
 |---|---|
 | Technical execution | A three-stage vision pipeline with typed structured outputs; a measured, reproducible accuracy benchmark; graceful fallbacks (demo mode, Google Maps fallback, a hidden iFixit strip on failure) |
-| Creativity & novelty | Highlights on *your* photo, a "Check my work" repair coach, a hands-free voice mode |
-| Impact & utility | Real costs and savings, honest safety verdicts, local stores and pros, a Repair Café option, a landfill and money impact tracker, answers in your language |
-| Presentation & polish | A mobile-first UI, dark mode, an installable app, smooth loading states, and a tight 3-minute demo with a backup plan |
+| Creativity & novelty | A walkable pixel house as the way in, highlights on *your* photo, a "Check my work" repair coach, hands-free voice mode, Fixed Wrapped |
+| Impact & utility | Real costs and savings, a cheapest-first "who can fix it" ladder, a no-tools mode with household stand-ins, honest safety verdicts, local stores and pros, a fix diary, answers in your language |
+| Presentation & polish | A hand-made pixel and binder look (no generic AI template), dark mode, 0 axe accessibility violations, an installable app, and a tight 3-minute demo with a backup plan |

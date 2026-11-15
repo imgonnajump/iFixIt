@@ -18,8 +18,18 @@ A user sends a photo of something broken (and maybe a short note). Your job:
 5. Give clear numbered steps a first-timer can follow. Always start with the safety step (unplug, shut off water, turn off breaker, etc.) when relevant.
 6. For each step, set look_for to the part in the photo that step works on, with a visual cue (color, material, position) so it can be highlighted. Use null if that part isn't visible.
 7. Name the kind of local professional who could do the job, in case the user gets stuck.
+8. List help_options from cheapest to most expensive, with honest local US prices, so people on a budget know their choices (free community help first).
 Be specific, practical and concise. Never invent certainty: if the photo is unclear, set can_diagnose to false or confidence to low and ask for what you need.
 For a dashboard warning light, identify the light, explain what it means, and say whether it is safe to keep driving.`;
+
+// Adapt the plan to the tools the user actually has.
+function toolkitRule(kit: unknown) {
+  if (kit === "none")
+    return "\nThe user has NO tools. Plan the fix around everyday household items (coins, butter knife, pliers-free tricks, rubber bands, tape, zip ties, a hair dryer, a bucket). Give a safe household substitute for every tool where one exists, mark the tools that are truly essential, and in no_tools_tip say how to do it with what's at home, or name the one cheap tool worth buying or borrowing (tool library, neighbor, many hardware stores). Never suggest an unsafe improvisation, especially with electricity, gas or batteries.";
+  if (kit === "basic")
+    return "\nThe user only has basics (a screwdriver set, pliers, tape, scissors). Prefer fixes that need only these; give household substitutes for anything else and say in no_tools_tip which extra tool, if any, is worth buying or borrowing.";
+  return "";
+}
 
 // Answer in the user's device language (search queries stay searchable).
 function languageRule(lang: unknown) {
@@ -28,7 +38,7 @@ function languageRule(lang: unknown) {
 }
 
 export async function POST(req: Request) {
-  let body: { image?: string; mediaType?: string; note?: string; lang?: string };
+  let body: { image?: string; mediaType?: string; note?: string; lang?: string; place?: string; toolkit?: string };
   try {
     body = await req.json();
   } catch {
@@ -57,7 +67,7 @@ export async function POST(req: Request) {
         effort: "medium",
         format: betaZodOutputFormat(DiagnosisSchema),
       },
-      system: SYSTEM + languageRule(body.lang),
+      system: SYSTEM + toolkitRule(body.toolkit) + languageRule(body.lang),
       messages: [
         {
           role: "user",
@@ -68,9 +78,12 @@ export async function POST(req: Request) {
             },
             {
               type: "text",
-              text: note?.trim()
-                ? `What's wrong, in my words: ${note.trim().slice(0, 500)}`
-                : "Here's the broken thing. What is it and how do I fix it?",
+              text: [
+                typeof body.place === "string" && body.place.trim() ? `Where it is: ${body.place.trim().slice(0, 120)}` : "",
+                note?.trim() ? `What's wrong, in my words: ${note.trim().slice(0, 500)}` : "Here's the broken thing. What is it and how do I fix it?",
+              ]
+                .filter(Boolean)
+                .join("\n"),
             },
           ],
         },

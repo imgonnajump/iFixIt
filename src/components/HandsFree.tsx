@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { PixelIcon } from "./PixelIcon";
 
 type Step = { title: string; detail: string; caution: string | null };
 
@@ -13,14 +14,7 @@ type Recognition = {
   start: () => void;
   stop: () => void;
   abort: () => void;
-  onresult:
-    | ((e: {
-        resultIndex: number;
-        results: ArrayLike<
-          ArrayLike<{ transcript: string }> & { isFinal: boolean }
-        >;
-      }) => void)
-    | null;
+  onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
   onend: (() => void) | null;
   onerror: ((e: { error: string }) => void) | null;
 };
@@ -44,17 +38,7 @@ const COMMANDS: [RegExp, "next" | "back" | "repeat" | "stop"][] = [
 
 // Hands-free mode: reads each step aloud and listens for "next", "repeat", "back", "stop".
 // Made for repairs where your hands are wet, greasy or full.
-export function HandsFree({
-  steps,
-  done,
-  onDone,
-  onUndo,
-}: {
-  steps: Step[];
-  done: Set<number>;
-  onDone: (i: number) => void;
-  onUndo: (i: number) => void;
-}) {
+export function HandsFree({ steps, done, onDone, onUndo }: { steps: Step[]; done: Set<number>; onDone: (i: number) => void; onUndo: (i: number) => void }) {
   const [active, setActive] = useState(false);
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState("");
@@ -67,8 +51,7 @@ export function HandsFree({
   doneRef.current = done;
 
   const current = steps.findIndex((_, i) => !done.has(i));
-  const hasSpeech =
-    typeof window !== "undefined" && "speechSynthesis" in window;
+  const hasSpeech = typeof window !== "undefined" && "speechSynthesis" in window;
   const Rec = getRecognition();
 
   const lang = typeof navigator !== "undefined" ? navigator.language : "en-US";
@@ -116,15 +99,9 @@ export function HandsFree({
   );
 
   // Latest `act`, for the recognizer callback (set below).
-  const actRef = useRef<(cmd: "next" | "back" | "repeat" | "stop") => void>(
-    () => {},
-  );
+  const actRef = useRef<(cmd: "next" | "back" | "repeat" | "stop") => void>(() => {});
 
-  const firstOpen = useCallback(
-    (skip?: number) =>
-      steps.findIndex((_, i) => !doneRef.current.has(i) && i !== skip),
-    [steps],
-  );
+  const firstOpen = useCallback((skip?: number) => steps.findIndex((_, i) => !doneRef.current.has(i) && i !== skip), [steps]);
 
   const act = useCallback(
     (cmd: "next" | "back" | "repeat" | "stop") => {
@@ -200,8 +177,7 @@ export function HandsFree({
         if (activeRef.current && !speakingRef.current) setTimeout(listen, 250);
       };
       r.onerror = (e) => {
-        if (e.error === "not-allowed" || e.error === "service-not-allowed")
-          setMicOk(false);
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") setMicOk(false);
       };
       recRef.current = r;
     }
@@ -218,34 +194,26 @@ export function HandsFree({
       <button
         type="button"
         onClick={active ? stop : start}
-        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold active:scale-95 ${
-          active
-            ? "bg-orange-600 text-white"
-            : "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-200"
-        }`}
+        className={`btn btn-sm text-xs ${active ? "btn-primary" : ""}`}
         aria-pressed={active}
       >
-        🎙️ {active ? "Hands-free on" : "Hands-free"}
+        <PixelIcon name="mic" size={14} /> {active ? "Hands-free on" : "Hands-free"}
       </button>
 
       {active &&
         createPortal(
-          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 px-4 pb-[max(env(safe-area-inset-bottom),14px)] pt-3 shadow-2xl backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-[var(--ink)] bg-[var(--paper)] px-4 pb-[max(env(safe-area-inset-bottom),14px)] pt-3 backdrop-blur">
             <div className="mx-auto max-w-xl">
               <div className="flex items-center gap-3">
-                <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-orange-600 text-lg text-white">
-                  {listening && micOk && (
-                    <span className="absolute inset-0 animate-ping rounded-full bg-orange-400/60" />
-                  )}
-                  <span className="relative">🎙️</span>
+                <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-lg text-white">
+                  {listening && micOk && <span className="absolute inset-0 animate-ping rounded-full bg-[var(--accent)]/50" />}
+                  <span className="relative"><PixelIcon name="mic" size={20} /></span>
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">
-                    {current >= 0
-                      ? `Step ${current + 1} of ${steps.length}: ${steps[current].title}`
-                      : "All steps done 🎉"}
+                    {current >= 0 ? `Step ${current + 1} of ${steps.length}: ${steps[current].title}` : "All steps done 🎉"}
                   </p>
-                  <p className="truncate text-xs text-stone-500">
+                  <p className="truncate text-xs muted">
                     {Rec && micOk
                       ? heard
                         ? `Heard: “${heard}”`
@@ -253,31 +221,18 @@ export function HandsFree({
                       : "Voice commands aren't available here. Use the buttons."}
                   </p>
                 </div>
-                <button
-                  onClick={stop}
-                  className="rounded-full bg-stone-100 px-2.5 py-1 text-sm dark:bg-stone-800"
-                  aria-label="Turn off hands-free"
-                >
-                  ✕
+                <button onClick={stop} className="btn btn-sm px-2" aria-label="Turn off hands-free">
+                  <PixelIcon name="close" size={14} />
                 </button>
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => act("back")}
-                  className="rounded-2xl bg-stone-100 py-4 text-sm font-semibold active:scale-95 dark:bg-stone-800"
-                >
+                <button onClick={() => act("back")} className="btn">
                   ◀ Back
                 </button>
-                <button
-                  onClick={() => act("repeat")}
-                  className="rounded-2xl bg-stone-100 py-4 text-sm font-semibold active:scale-95 dark:bg-stone-800"
-                >
+                <button onClick={() => act("repeat")} className="btn">
                   🔁 Repeat
                 </button>
-                <button
-                  onClick={() => act("next")}
-                  className="rounded-2xl bg-orange-600 py-4 text-sm font-bold text-white active:scale-95"
-                >
+                <button onClick={() => act("next")} className="btn btn-primary">
                   Next ▶
                 </button>
               </div>

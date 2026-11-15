@@ -1,32 +1,259 @@
 @import "tailwindcss";
 
+/* ---------- Theme: a paper binder on a desk ---------- */
 :root {
-  --background: #faf8f5;
-  --foreground: #1c1917;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --desk: #e7e1d3;
+  --paper: #fdfbf6;
+  --paper-2: #f6f1e6;
+  --ink: #2a2520;
+  --muted: #6a6157;
+  --line: #d9cfbd;
+  --tab: #1d6f80;
+  --tab-text: #1d6f80;
+  --tab-ink: #ffffff;
+  --accent: #c2410c;
+  --accent-ink: #ffffff;
+  --accent-soft: #fdebd8;
+  --good: #2b7a3d;
+  --good-soft: #e3f3e3;
+  --warn: #9a5b00;
+  --warn-soft: #fff2d6;
+  --bad: #b42323;
+  --bad-soft: #fde6e4;
+  --link: #145da0;
+  --focus: #145da0;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f0e0d;
-    --foreground: #f5f5f4;
+  :root:not([data-theme="light"]) {
+    --desk: #141210;
+    --paper: #1f1c18;
+    --paper-2: #29251f;
+    --ink: #f3eee4;
+    --muted: #b3a998;
+    --line: #463f35;
+    --tab: #1d6f80;
+    --tab-text: #7fcfdd;
+    --tab-ink: #ffffff;
+    --accent: #f08a4b;
+    --accent-ink: #1a0f06;
+    --accent-soft: #3a2415;
+    --good: #7fd18f;
+    --good-soft: #1c3121;
+    --warn: #f0b85a;
+    --warn-soft: #382a12;
+    --bad: #ff8b80;
+    --bad-soft: #3a1c1a;
+    --link: #8cc4ff;
+    --focus: #8cc4ff;
   }
 }
 
+@theme inline {
+  --color-desk: var(--desk);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-tab: var(--tab);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-link: var(--link);
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-pixel: var(--font-pixel), ui-monospace, monospace;
+}
+
+html {
+  background: var(--desk);
+}
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background-color: var(--desk);
+  background-image: radial-gradient(color-mix(in srgb, var(--ink) 7%, transparent) 1px, transparent 1px);
+  background-size: 14px 14px;
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 16px;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Scanning line over the photo while diagnosing */
+/* Clear keyboard focus everywhere */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.font-pixel {
+  font-family: var(--font-pixel), ui-monospace, monospace;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Building blocks (in a layer so Tailwind utilities can override them) ---------- */
+@layer components {
+.page {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 1px 0 var(--line), 0 6px 0 -3px var(--paper-2), 0 6px 0 -2px var(--line);
+}
+.page-dash {
+  border: 2px dashed var(--line);
+  border-radius: 10px;
+}
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.title {
+  font-family: var(--font-pixel), ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  color: var(--tab-text);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  letter-spacing: 0;
+}
+@media (min-width: 640px) {
+  .title {
+    font-size: 0.9rem;
+  }
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 8px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 700;
+  padding: 0.55rem 0.9rem;
+  box-shadow: 0 3px 0 var(--ink);
+  transition: transform 80ms ease, box-shadow 80ms ease;
+  min-height: 44px;
+  white-space: nowrap;
+}
+.btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.btn-tab {
+  background: var(--tab);
+  color: var(--tab-ink);
+}
+.btn-sm {
+  min-height: 34px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 0 var(--ink);
+  border-width: 1.5px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.85rem;
+}
+button.chip:hover {
+  border-color: var(--ink);
+}
+.stamp {
+  display: inline-block;
+  font-family: var(--font-pixel), ui-monospace, monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.field {
+  width: 100%;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  color: var(--ink);
+}
+.field:focus {
+  border-color: var(--focus);
+  outline: none;
+}
+.link {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.muted {
+  color: var(--muted);
+}
+.dash-list > li + li {
+  border-top: 1px dashed var(--line);
+}
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+}
+
+/* Ring binding between the two binder pages */
+.rings {
+  background-image: radial-gradient(circle at 50% 50%, var(--paper-2) 0 5px, var(--line) 5px 7px, transparent 7px);
+  background-size: 18px 64px;
+  background-repeat: repeat-y;
+}
+
+/* ---------- Motion ---------- */
 @keyframes scan {
   0% { top: 0%; }
   50% { top: calc(100% - 4px); }
@@ -37,28 +264,36 @@ body {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, transparent, #fb923c, transparent);
-  box-shadow: 0 0 24px 6px rgba(251, 146, 60, 0.55);
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 18px 4px color-mix(in srgb, var(--accent) 55%, transparent);
   animation: scan 2.4s ease-in-out infinite;
 }
-
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
 .fade-up {
-  animation: fade-up 0.4s ease-out both;
+  animation: fade-up 0.35s ease-out both;
 }
-
 @keyframes pop {
-  0% { transform: scale(0.9); opacity: 0; }
-  60% { transform: scale(1.03); opacity: 1; }
+  0% { transform: scale(0.92); opacity: 0; }
+  60% { transform: scale(1.02); opacity: 1; }
   100% { transform: scale(1); }
 }
 .pop {
-  animation: pop 0.45s ease-out both;
+  animation: pop 0.4s ease-out both;
 }
-
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.bob {
+  animation: bob 1.2s ease-in-out infinite;
+}
+@keyframes story-bar {
+  from { width: 0%; }
+  to { width: 100%; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .scan-line, .fade-up, .pop { animation: none; }
+  .scan-line, .fade-up, .pop, .bob { animation: none; }
 }

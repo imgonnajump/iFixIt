@@ -1,7 +1,7 @@
 import type { Diagnosis } from "./schema";
 
 // "$120-200" -> 160. Returns null if no number found.
-function midpoint(s: string): number | null {
+export function midpoint(s: string): number | null {
   const nums = (s.replace(/,/g, "").match(/\d+(\.\d+)?/g) ?? []).map(Number).slice(0, 2);
   if (nums.length === 0) return null;
   return nums.reduce((a, b) => a + b, 0) / nums.length;

@@ -26,7 +26,10 @@ export function StepPhoto({
 }) {
   const [zoomed, setZoomed] = useState(true);
 
-  const x1 = box.x1 / 100, x2 = box.x2 / 100, y1 = box.y1 / 100, y2 = box.y2 / 100;
+  const x1 = box.x1 / 100,
+    x2 = box.x2 / 100,
+    y1 = box.y1 / 100,
+    y2 = box.y2 / 100;
   const cx = (x1 + x2) / 2;
   const cy = (y1 + y2) / 2;
 
@@ -50,17 +53,16 @@ export function StepPhoto({
   const top = oy + y1 * t;
   const bottom = oy + y2 * t;
 
-  const ring = { orange: "border-orange-500", red: "border-rose-500", green: "border-emerald-500" }[tone];
-  const chip = { orange: "bg-orange-600", red: "bg-rose-600", green: "bg-emerald-600" }[tone];
+  const ring = { orange: "border-[var(--accent)]", red: "border-rose-500", green: "border-emerald-500" }[tone];
+  const chip = { orange: "bg-[var(--accent)]", red: "bg-rose-600", green: "bg-emerald-600" }[tone];
   // Label above the box; below it if there's no room; inside it if the box fills the frame.
-  const labelTop =
-    top >= 0.12 ? `calc(${top * 100}% - 26px)` : bottom < 0.85 ? `calc(${bottom * 100}% + 6px)` : `calc(${top * 100}% + 8px)`;
+  const labelTop = top >= 0.12 ? `calc(${top * 100}% - 26px)` : bottom < 0.85 ? `calc(${bottom * 100}% + 6px)` : `calc(${top * 100}% + 8px)`;
 
   return (
     <button
       type="button"
       onClick={() => setZoomed((v) => !v)}
-      className="relative mt-3 block w-full overflow-hidden rounded-xl bg-stone-200 dark:bg-stone-800"
+      className="relative mt-3 block w-full overflow-hidden rounded-lg bg-[var(--paper-2)]"
       style={{
         aspectRatio: `${BOX_ASPECT}`,
         backgroundImage: `url(${src})`,
@@ -82,7 +84,7 @@ export function StepPhoto({
         }}
       />
       <span
-        className={`absolute -translate-x-1/2 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold text-white shadow ${chip}`}
+        className={`absolute -translate-x-1/2 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-semibold text-white ${chip}`}
         style={{
           left: `${Math.min(85, Math.max(15, ((left + right) / 2) * 100))}%`,
           top: labelTop,
@@ -99,7 +101,7 @@ export function StepPhoto({
 
 export function StepPhotoSkeleton() {
   return (
-    <div className="mt-3 flex aspect-[4/3] w-full animate-pulse items-center justify-center rounded-xl bg-stone-200 text-xs text-stone-500 dark:bg-stone-800">
+    <div className="mt-3 flex aspect-[4/3] w-full animate-pulse items-center justify-center rounded-lg bg-[var(--paper-2)] text-xs muted">
       Finding it on your photo…
     </div>
   );

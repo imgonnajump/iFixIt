@@ -1,14 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import type { IconName } from "@/lib/pixel/icons";
 import { PLACE_LABELS, type PlaceType, type Store } from "@/lib/stores";
+import { PixelIcon } from "./PixelIcon";
 
-type State =
-  | { kind: "idle" }
-  | { kind: "locating" }
-  | { kind: "searching" }
-  | { kind: "done"; places: Store[] }
-  | { kind: "error"; message: string };
+type State = { kind: "idle" } | { kind: "locating" } | { kind: "searching" } | { kind: "done"; places: Store[] } | { kind: "error"; message: string };
 
 function prefersMiles() {
   if (typeof navigator === "undefined") return true;
@@ -44,7 +41,7 @@ export function NearbyPlaces({
   children,
 }: {
   title: string;
-  icon: string;
+  icon: IconName;
   types: PlaceType[];
   buttonLabel: string;
   tip?: string;
@@ -87,45 +84,44 @@ export function NearbyPlaces({
   }
 
   return (
-    <div
-      className={`fade-up rounded-3xl p-5 shadow-sm ring-1 ${
-        emphasis ? "bg-rose-50 ring-rose-200 dark:bg-rose-950/30 dark:ring-rose-900" : "bg-white ring-stone-200 dark:bg-stone-900 dark:ring-stone-800"
-      }`}
-    >
-      <h3 className="mb-1 flex items-center gap-2 text-lg font-bold">
-        <span aria-hidden>{icon}</span>
+    <div className="card p-4" data-emphasis={emphasis || undefined}>
+      <h3 className="title mb-1">
+        <PixelIcon name={icon} />
         {title}
       </h3>
-      <p className="mb-4 text-sm text-stone-500">Look for a{/^[AEIOU]/i.test(labels[0]) ? "n" : ""} {joinOr(labels)}.</p>
+      <p className="mb-4 text-sm muted">
+        Look for a{/^[AEIOU]/i.test(labels[0]) ? "n" : ""} {joinOr(labels)}.
+      </p>
 
       {state.kind === "idle" && (
         <>
-          <button
-            type="button"
-            onClick={find}
-            className="w-full rounded-2xl bg-orange-600 py-3.5 font-semibold text-white shadow-md shadow-orange-600/20 active:scale-[0.98]"
-          >
+          <button type="button" onClick={find} className="btn btn-primary w-full">
             {buttonLabel}
           </button>
-          <p className="mt-2 text-center text-xs text-stone-400">Your location is only used for this search. It isn&apos;t saved.</p>
+          <p className="mt-2 text-center text-xs muted">Your location is only used for this search. It isn&apos;t saved.</p>
         </>
       )}
 
       {(state.kind === "locating" || state.kind === "searching") && (
-        <div className="flex items-center justify-center gap-3 py-4 text-sm text-stone-500">
-          <span className="h-5 w-5 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+        <div className="flex items-center justify-center gap-3 py-4 text-sm muted">
+          <span className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
           {state.kind === "locating" ? "Getting your location…" : "Searching near you…"}
         </div>
       )}
 
       {state.kind === "error" && (
         <div className="space-y-3">
-          <p className="rounded-xl bg-rose-100/70 p-3 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-200">{state.message}</p>
+          <p className="rounded-lg bg-[var(--bad-soft)] p-3 text-sm ">{state.message}</p>
           <div className="flex gap-2">
-            <button onClick={find} className="flex-1 rounded-2xl bg-stone-100 py-3 text-sm font-semibold dark:bg-stone-800">
+            <button onClick={find} className="btn btn-sm flex-1">
               Retry
             </button>
-            <a href={mapsSearch} target="_blank" rel="noopener noreferrer" className="flex-1 rounded-2xl bg-stone-900 py-3 text-center text-sm font-semibold text-white dark:bg-white dark:text-stone-900">
+            <a
+              href={mapsSearch}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-sm btn-tab flex-1"
+            >
               Google Maps ↗
             </a>
           </div>
@@ -134,8 +130,13 @@ export function NearbyPlaces({
 
       {state.kind === "done" && state.places.length === 0 && (
         <div className="space-y-3">
-          <p className="text-sm text-stone-600 dark:text-stone-300">Nothing listed within about 15 miles.</p>
-          <a href={mapsSearch} target="_blank" rel="noopener noreferrer" className="block rounded-2xl bg-stone-900 py-3 text-center text-sm font-semibold text-white dark:bg-white dark:text-stone-900">
+          <p className="text-sm ">Nothing listed within about 15 miles.</p>
+          <a
+            href={mapsSearch}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-sm btn-tab block"
+          >
             Search Google Maps ↗
           </a>
         </div>
@@ -143,27 +144,30 @@ export function NearbyPlaces({
 
       {state.kind === "done" && state.places.length > 0 && (
         <>
-          <ul className="divide-y divide-stone-200/70 dark:divide-stone-800">
+          <ul className="divide-y divide-[var(--line)]">
             {state.places.map((s, i) => (
               <li key={`${s.name}-${s.lat}-${s.lon}`} className="flex items-center gap-3 py-3 first:pt-0">
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 font-semibold leading-snug">{s.name}</p>
-                  <p className="truncate text-xs text-stone-500">
+                  <p className="truncate text-xs muted">
                     {i === 0 && (
-                      <span className="mr-1.5 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                      <span className="mr-1.5 rounded-full bg-[var(--good-soft)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[var(--good)]">
                         Closest
                       </span>
                     )}
                     {PLACE_LABELS[s.type]}
                     {s.address && <> · {s.address}</>}
                   </p>
-                  {s.hours && <p className="truncate text-xs text-stone-400">🕒 {s.hours}</p>}
+                  {s.hours && <p className="truncate text-xs muted">{s.hours}</p>}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-sm font-bold text-orange-600">{formatDistance(s.distanceKm, miles)}</span>
+                  <span className="font-pixel text-sm font-bold text-[var(--accent)]">{formatDistance(s.distanceKm, miles)}</span>
                   <div className="flex gap-1">
                     {s.phone && (
-                      <a href={`tel:${s.phone.replace(/[^\d+]/g, "")}`} className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 active:scale-95 dark:bg-emerald-950 dark:text-emerald-200">
+                      <a
+                        href={`tel:${s.phone.replace(/[^\d+]/g, "")}`}
+                        className="btn btn-sm px-2 text-xs"
+                      >
                         Call
                       </a>
                     )}
@@ -171,7 +175,7 @@ export function NearbyPlaces({
                       href={`https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold active:scale-95 dark:bg-stone-800"
+                      className="btn btn-sm px-2 text-xs"
                     >
                       Directions ↗
                     </a>
@@ -180,7 +184,7 @@ export function NearbyPlaces({
               </li>
             ))}
           </ul>
-          {tip && <p className="mt-3 rounded-xl bg-sky-50 p-3 text-xs text-sky-900 dark:bg-sky-950 dark:text-sky-200">💡 {tip}</p>}
+          {tip && <p className="mt-3 rounded-lg bg-[var(--paper-2)] p-3 text-xs ">Tip: {tip}</p>}
         </>
       )}
 

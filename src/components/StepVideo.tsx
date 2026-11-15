@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PixelIcon } from "./PixelIcon";
 
 type Video = { id: string; title: string; channel: string };
 type State = { kind: "closed" } | { kind: "loading" } | { kind: "video"; video: Video } | { kind: "search" };
@@ -32,23 +33,23 @@ export function StepVideo({ query }: { query: string }) {
   }
 
   return (
-    <div className="mt-2">
+    <div className="mt-2 w-full sm:w-auto">
       <button
         type="button"
         onClick={open}
-        className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 active:scale-95 dark:bg-red-950/60 dark:text-red-300"
+        className="btn btn-sm"
         aria-expanded={state.kind === "video"}
       >
         {state.kind === "loading" ? (
-          <span className="h-3 w-3 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+          <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--bad)] border-t-transparent" />
         ) : (
-          <span aria-hidden>{state.kind === "video" ? "✕" : "▶"}</span>
+          <PixelIcon name={state.kind === "video" ? "close" : "play"} size={14} />
         )}
         {state.kind === "video" ? "Hide video" : "Watch how"}
       </button>
 
       {state.kind === "video" && (
-        <div className="fade-up mt-2 overflow-hidden rounded-xl bg-black">
+        <div className="fade-up mt-2 overflow-hidden rounded-lg bg-black">
           <div className="relative aspect-video">
             <iframe
               className="absolute inset-0 h-full w-full"
@@ -59,10 +60,10 @@ export function StepVideo({ query }: { query: string }) {
               loading="lazy"
             />
           </div>
-          <div className="flex items-center justify-between gap-2 bg-stone-900 px-3 py-2 text-xs text-stone-300">
+          <div className="flex items-center justify-between gap-2 bg-[var(--ink)] px-3 py-2 text-xs ">
             <span className="truncate">
               {state.video.title}
-              {state.video.channel && <span className="text-stone-500"> · {state.video.channel}</span>}
+              {state.video.channel && <span className="muted"> · {state.video.channel}</span>}
             </span>
             <a href={searchUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 font-semibold text-white">
               More ↗

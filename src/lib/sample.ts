@@ -17,7 +17,12 @@ export const SAMPLE_DIAGNOSIS: Diagnosis = {
   pro_cost: "$120-200",
   replace_cost: "$150-350",
   safety_warnings: ["Tank water is clean, but the bowl is not: wear gloves if you reach below the rim."],
-  tools: ["Rubber gloves", "Sponge or towel", "Scissors (to trim the chain)"],
+  tools: [
+    { name: "Rubber gloves", substitute: "a plastic bag over your hand", essential: false },
+    { name: "Sponge or towel", substitute: "an old t-shirt", essential: false },
+    { name: "Scissors (to trim the chain)", substitute: "just hook the chain one link higher", essential: false },
+  ],
+  no_tools_tip: "No tools needed: a flapper clips on by hand. Bring the old one to the store so you buy the right size.",
   parts: [{ name: "Universal 2-inch toilet flapper", approx_cost: "$6-12" }],
   steps: [
     { title: "Shut off the water", look_for: "Shutoff valve", detail: "Turn the supply valve behind the toilet clockwise until it stops.", caution: null, video_search: "how to shut off water valve behind toilet" },
@@ -29,6 +34,12 @@ export const SAMPLE_DIAGNOSIS: Diagnosis = {
   stop_and_call_pro_if: ["Water is leaking onto the floor from the base or tank bolts", "The shutoff valve won't turn or drips when you turn it"],
   store_types: ["hardware", "home_goods"],
   pro_types: ["plumber"],
+  help_options: [
+    { who: "A handy friend or neighbor", tier: "free", cost: "Free", good_for: "Anyone who has swapped a flapper before can do this in 10 minutes." },
+    { who: "Handyman", tier: "budget", cost: "$60-100", good_for: "Cheapest paid option; a flapper swap is a quick, basic job." },
+    { who: "Licensed plumber", tier: "standard", cost: "$120-200", good_for: "If the shutoff valve is stuck or the tank itself is leaking." },
+  ],
+  room: "bathroom",
   ifixit_search: "toilet flapper replacement",
   waste_saved_kg: 40,
 };

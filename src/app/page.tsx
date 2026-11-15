@@ -1,310 +1,168 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Diagnosis } from "@/lib/schema";
-import { PrimaryButton, Result } from "@/components/Result";
-import { loadFixes, totals, type Fix } from "@/lib/fixlog";
-import { prepareImage } from "@/lib/image";
+import { Diary } from "@/components/Diary";
+import { FixFlow, type Place } from "@/components/FixFlow";
+import { PixelIcon } from "@/components/PixelIcon";
+import { PixelWorld } from "@/components/PixelWorld";
+import { ProfilePanel } from "@/components/ProfilePanel";
+import { WrappedCard } from "@/components/Wrapped";
+import { loadFixes, saveFixes, type Fix } from "@/lib/fixlog";
+import type { IconName } from "@/lib/pixel/icons";
+import { ROOMS } from "@/lib/pixel/world";
+import { countVisit, DEFAULT_PROFILE, loadProfile, saveProfile, type Profile } from "@/lib/profile";
+import { isWrappedSeason } from "@/lib/wrapped";
 
-const EXAMPLES = [
-  { icon: "🚽", text: "Toilet keeps running" },
-  { icon: "🔌", text: "Charger cable is frayed" },
-  { icon: "🚲", text: "Bike gears skip" },
-  { icon: "🚰", text: "Faucet drips" },
-  { icon: "🚗", text: "Warning light came on" },
-  { icon: "💻", text: "Laptop hinge is loose" },
-];
-
-const STAGES = [
-  "Looking closely at your photo…",
-  "Identifying the part…",
-  "Figuring out what went wrong…",
-  "Checking if it's safe to DIY…",
-  "Pricing parts and tools…",
-  "Writing your step-by-step fix…",
-  "Almost there…",
-];
-
-const TIPS = [
-  "Take a photo of a part before you remove it. It's the best reassembly guide.",
-  "Put screws in an egg carton in the order you remove them.",
-  "Bring the old part to the hardware store to match it exactly.",
-  "Always cut the power or the water first. Every time.",
-  "Over 60 million tonnes of e-waste are thrown away every year. Repair beats recycling.",
+type Tab = "home" | "fix" | "diary" | "wrapped";
+const TABS: { id: Tab; label: string; icon: IconName }[] = [
+  { id: "home", label: "Home", icon: "house" },
+  { id: "fix", label: "Fix it", icon: "camera" },
+  { id: "diary", label: "Diary", icon: "book" },
+  { id: "wrapped", label: "Wrapped", icon: "gift" },
 ];
 
 export default function Home() {
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const galleryRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [aspect, setAspect] = useState(4 / 3);
-  const [image, setImage] = useState<{ data: string; mediaType: string; grid: string } | null>(null);
-  const [note, setNote] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<Diagnosis | null>(null);
-  const [demo, setDemo] = useState(false);
-  const [fixes, setFixes] = useState<Fix[]>([]);
+  const [tab, setTab] = useState<Tab>("home");
+  const [profile, setProfileState] = useState<Profile>(DEFAULT_PROFILE);
+  const [fixes, setFixesState] = useState<Fix[]>([]);
+  const [visits, setVisits] = useState({ today: 1, total: 1 });
+  const [place, setPlace] = useState<Place | null>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
-    setFixes(loadFixes());
-  }, [result]);
+    setProfileState(loadProfile());
+    setFixesState(loadFixes());
+    setVisits(countVisit());
+  }, []);
 
-  async function onFile(file: File | undefined) {
-    if (!file) return;
-    setError(null);
-    setResult(null);
-    try {
-      const { data, grid, preview, aspect } = await prepareImage(file);
-      setPreview(preview);
-      setAspect(aspect);
-      setImage({ data, mediaType: "image/jpeg", grid });
-    } catch {
-      setError("Couldn't read that image. Try a JPEG or PNG.");
-    }
-  }
+  const setProfile = (p: Profile) => {
+    setProfileState(p);
+    saveProfile(p);
+  };
+  const setFixes = (f: Fix[]) => {
+    setFixesState(f);
+    saveFixes(f);
+  };
+  const logFix = (f: Fix) => setFixes([f, ...loadFixes().filter((x) => x.id !== f.id)]);
 
-  async function diagnose() {
-    if (!image) return;
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    try {
-      const res = await fetch("/api/diagnose", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: image.data, mediaType: image.mediaType, note, lang: navigator.language }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error ?? "Something went wrong.");
-      setResult(json.diagnosis);
-      setDemo(Boolean(json.demo));
-      window.scrollTo({ top: 0 });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function reset() {
-    setPreview(null);
-    setImage(null);
-    setNote("");
-    setResult(null);
-    setError(null);
-    if (cameraRef.current) cameraRef.current.value = "";
-    if (galleryRef.current) galleryRef.current.value = "";
+  function go(t: Tab) {
+    setTab(t);
     window.scrollTo({ top: 0 });
   }
 
-  return (
-    <main className="mx-auto min-h-dvh max-w-xl px-4 pb-10 pt-5">
-      <header className="mb-6 flex items-center justify-between">
-        <button onClick={reset} className="flex items-center gap-2.5" aria-label="FixCam home">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="" className="h-9 w-9" />
-          <span className="text-xl font-extrabold tracking-tight">FixCam</span>
-        </button>
-        {(preview || result) && !loading && (
-          <button onClick={reset} className="text-sm font-medium text-stone-500">
-            Start over
-          </button>
-        )}
-      </header>
+  function onTabKey(e: React.KeyboardEvent, i: number, vertical: boolean) {
+    const fwd = vertical ? "ArrowDown" : "ArrowRight";
+    const back = vertical ? "ArrowUp" : "ArrowLeft";
+    const dir = e.key === fwd ? 1 : e.key === back ? -1 : 0;
+    if (!dir) return;
+    e.preventDefault();
+    const next = TABS[(i + dir + TABS.length) % TABS.length];
+    go(next.id);
+    tabRefs.current[`${next.id}-${vertical}`]?.focus();
+  }
 
-      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-
-      {loading && preview && <Loading preview={preview} />}
-
-      {!loading && result && <Result d={result} preview={preview} aspect={aspect} grid={image?.grid ?? null} demo={demo} onReset={reset} />}
-
-      {!loading && !result && !preview && (
-        <section className="fade-up space-y-6">
-          <div>
-            <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight">
-              What&apos;s <span className="text-orange-600">broken?</span>
-            </h1>
-            <p className="mt-3 text-lg text-stone-600 dark:text-stone-300">
-              Snap a photo. Get the part name, what it costs, and a step-by-step fix.
-            </p>
-          </div>
-
+  const tabList = (vertical: boolean) => (
+    <div
+      role="tablist"
+      aria-label="Sections"
+      aria-orientation={vertical ? "vertical" : "horizontal"}
+      className={vertical ? "flex flex-col gap-1.5" : "flex gap-1"}
+    >
+      {TABS.map((t, i) => {
+        const active = tab === t.id;
+        return (
           <button
-            type="button"
-            onClick={() => cameraRef.current?.click()}
-            className="group relative flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 to-orange-700 text-white shadow-xl shadow-orange-600/25 transition active:scale-[0.98]"
+            key={t.id}
+            ref={(el) => {
+              tabRefs.current[`${t.id}-${vertical}`] = el;
+            }}
+            role="tab"
+            id={`tab-${t.id}${vertical ? "" : "-m"}`}
+            aria-selected={active}
+            aria-controls={`panel-${t.id}`}
+            tabIndex={active ? 0 : -1}
+            onClick={() => go(t.id)}
+            onKeyDown={(e) => onTabKey(e, i, vertical)}
+            className={
+              vertical
+                ? `flex items-center gap-2 rounded-r-lg border border-l-0 px-3 py-2.5 text-left text-sm font-bold transition-all ${
+                    active ? "border-[var(--line)] bg-[var(--paper)] pl-4 text-[var(--ink)]" : "border-transparent bg-[var(--tab)] text-white hover:pl-4"
+                  }`
+                : `flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-t-lg border border-b-0 px-1 py-2 text-sm font-bold ${
+                    active ? "border-[var(--line)] bg-[var(--paper)] text-[var(--ink)]" : "border-transparent bg-[var(--tab)] text-white"
+                  }`
+            }
           >
-            <span className="absolute inset-4 rounded-2xl border-2 border-dashed border-white/40" />
-            <span className="grid h-20 w-20 place-items-center rounded-full bg-white/20 text-4xl backdrop-blur transition group-hover:scale-105">📷</span>
-            <span className="text-xl font-bold">Take a photo</span>
-            <span className="text-sm opacity-85">Get close to the broken part</span>
+            <PixelIcon name={t.icon} size={16} />
+            {t.label}
+            {t.id === "wrapped" && isWrappedSeason() && <span className="sr-only"> (new)</span>}
           </button>
-
-          <button
-            type="button"
-            onClick={() => galleryRef.current?.click()}
-            className="w-full rounded-2xl bg-white py-3.5 font-semibold text-stone-800 shadow-sm ring-1 ring-stone-200 active:scale-[0.98] dark:bg-stone-900 dark:text-stone-100 dark:ring-stone-800"
-          >
-            🖼️ Choose from gallery
-          </button>
-
-          {fixes.length > 0 && <ImpactCard fixes={fixes} />}
-
-          <div>
-            <p className="mb-2 text-sm font-medium text-stone-500">Works on things like</p>
-            <div className="flex flex-wrap gap-2">
-              {EXAMPLES.map((e) => (
-                <span key={e.text} className="rounded-full bg-white px-3 py-1.5 text-sm shadow-sm ring-1 ring-stone-200 dark:bg-stone-900 dark:ring-stone-800">
-                  {e.icon} {e.text}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 pt-2 text-center">
-            {[
-              { n: "1", icon: "📸", t: "Snap it" },
-              { n: "2", icon: "🔍", t: "We name the part" },
-              { n: "3", icon: "✅", t: "We check your work" },
-            ].map((s) => (
-              <div key={s.n} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-stone-200 dark:bg-stone-900 dark:ring-stone-800">
-                <p className="text-2xl">{s.icon}</p>
-                <p className="mt-1 text-xs font-semibold">{s.t}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="pt-2 text-center text-xs text-stone-400">
-            AI can make mistakes. When in doubt, especially with gas, electricity or brakes, call a professional.
-          </p>
-        </section>
-      )}
-
-      {!loading && !result && preview && (
-        <section className="fade-up space-y-4">
-          <div className="relative overflow-hidden rounded-3xl shadow-lg">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt="Your photo" className="max-h-[50vh] w-full object-cover" />
-            <button
-              onClick={() => cameraRef.current?.click()}
-              className="absolute right-3 top-3 rounded-full bg-black/55 px-3 py-1.5 text-sm font-medium text-white backdrop-blur"
-            >
-              ↺ Retake
-            </button>
-          </div>
-
-          <div className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-stone-200 dark:bg-stone-900 dark:ring-stone-800">
-            <label htmlFor="note" className="text-sm font-semibold">
-              What&apos;s it doing? <span className="font-normal text-stone-400">(optional)</span>
-            </label>
-            <textarea
-              id="note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. keeps running after I flush"
-              rows={2}
-              className="mt-2 w-full resize-none rounded-xl bg-stone-50 p-3 text-base outline-none ring-1 ring-stone-200 focus:ring-2 focus:ring-orange-400 dark:bg-stone-800 dark:ring-stone-700"
-            />
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {EXAMPLES.slice(0, 4).map((e) => (
-                <button
-                  key={e.text}
-                  type="button"
-                  onClick={() => setNote(e.text)}
-                  className="rounded-full bg-stone-100 px-2.5 py-1 text-xs text-stone-700 active:scale-95 dark:bg-stone-800 dark:text-stone-300"
-                >
-                  {e.icon} {e.text}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {error && <ErrorBox message={error} />}
-
-          <PrimaryButton onClick={diagnose} disabled={!image}>
-            🔍 Diagnose it
-          </PrimaryButton>
-        </section>
-      )}
-
-      {!loading && !result && !preview && error && <ErrorBox message={error} />}
-    </main>
-  );
-}
-
-function Loading({ preview }: { preview: string }) {
-  const [stage, setStage] = useState(0);
-  const [progress, setProgress] = useState(4);
-  const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
-
-  useEffect(() => {
-    const s = setInterval(() => setStage((i) => Math.min(i + 1, STAGES.length - 1)), 4000);
-    // Eases toward 95% so it keeps moving but never claims to finish early.
-    const p = setInterval(() => setProgress((x) => x + (95 - x) * 0.06), 400);
-    return () => {
-      clearInterval(s);
-      clearInterval(p);
-    };
-  }, []);
-
-  return (
-    <section className="fade-up space-y-5" aria-live="polite">
-      <div className="relative overflow-hidden rounded-3xl shadow-lg">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={preview} alt="" className="max-h-[45vh] w-full object-cover brightness-75" />
-        <div className="scan-line" />
-        <div className="pointer-events-none absolute inset-5 rounded-2xl border-2 border-white/50" />
-      </div>
-      <div className="text-center">
-        <p key={stage} className="fade-up text-lg font-semibold">
-          {STAGES[stage]}
-        </p>
-        <div className="mx-auto mt-3 h-2 max-w-xs overflow-hidden rounded-full bg-stone-200 dark:bg-stone-800">
-          <div className="h-full rounded-full bg-orange-500 transition-all duration-500" style={{ width: `${progress}%` }} />
-        </div>
-        <p className="mt-2 text-xs text-stone-400">This usually takes 15–30 seconds</p>
-      </div>
-      <div className="rounded-2xl bg-white p-4 text-sm shadow-sm ring-1 ring-stone-200 dark:bg-stone-900 dark:ring-stone-800">
-        <p className="font-semibold text-orange-600">💡 Repair tip</p>
-        <p className="mt-1 text-stone-600 dark:text-stone-300">{tip}</p>
-      </div>
-    </section>
-  );
-}
-
-function ImpactCard({ fixes }: { fixes: Fix[] }) {
-  const t = totals(fixes);
-  return (
-    <div className="rounded-3xl bg-emerald-600 p-5 text-white shadow-lg shadow-emerald-600/20">
-      <p className="text-sm font-semibold opacity-90">♻️ Your repair impact</p>
-      <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-        <div>
-          <p className="text-2xl font-extrabold">{t.count}</p>
-          <p className="text-xs opacity-85">{t.count === 1 ? "fix" : "fixes"}</p>
-        </div>
-        <div>
-          <p className="text-2xl font-extrabold">${t.saved.toLocaleString()}</p>
-          <p className="text-xs opacity-85">saved</p>
-        </div>
-        <div>
-          <p className="text-2xl font-extrabold">{t.kg} kg</p>
-          <p className="text-xs opacity-85">kept from landfill</p>
-        </div>
-      </div>
-      <p className="mt-3 truncate text-xs opacity-80">
-        Latest: {fixes[0].part} ({fixes[0].item})
-      </p>
+        );
+      })}
     </div>
   );
-}
 
-function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-800 ring-1 ring-rose-200 dark:bg-rose-950/50 dark:text-rose-200 dark:ring-rose-900">
-      <p className="font-semibold">😕 That didn&apos;t work</p>
-      <p className="mt-1">{message}</p>
-    </div>
+    <>
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-[var(--paper)] focus:px-3 focus:py-2">
+        Skip to content
+      </a>
+      <div className="mx-auto max-w-5xl px-2 py-3 sm:px-4 sm:py-6 md:pr-[118px]">
+        <div className="page relative p-2 sm:p-3">
+          {/* desktop: tabs stick out of the binder's right edge */}
+          <div className="absolute -right-[112px] top-20 hidden w-[112px] md:block">{tabList(true)}</div>
+
+          <div className="page-dash p-2 sm:p-3 md:grid md:grid-cols-[230px_22px_1fr]">
+            <div className="card hidden p-3 md:block">
+              <ProfilePanel profile={profile} setProfile={setProfile} fixes={fixes} visits={visits} />
+            </div>
+            <div className="rings hidden md:block" aria-hidden />
+
+            <div className="min-w-0">
+              <header className="mb-2 flex items-end justify-between gap-2 px-1">
+                <div className="min-w-0">
+                  <h1 className="truncate text-xl font-extrabold text-[var(--tab-text)] sm:text-2xl">{profile.name}&apos;s fix house</h1>
+                  <p className="font-pixel truncate text-[11px] muted">fixcam / {tab}</p>
+                </div>
+                <p className="font-pixel shrink-0 text-[10px] muted md:hidden">
+                  TODAY <span className="text-[var(--accent)]">{visits.today}</span> | TOTAL {visits.total}
+                </p>
+              </header>
+
+              <aside aria-label="Your profile" className="card mb-2 p-2 md:hidden">
+                <ProfilePanel profile={profile} setProfile={setProfile} fixes={fixes} visits={visits} compact />
+              </aside>
+
+              <nav aria-label="Sections" className="sticky top-0 z-20 bg-[var(--paper)] pt-1 md:hidden">
+                {tabList(false)}
+              </nav>
+
+              <main id="main" className="card min-h-[60vh] rounded-t-none p-3 sm:p-4 md:rounded-t-[10px]">
+                <div role="tabpanel" id="panel-home" aria-labelledby="tab-home" hidden={tab !== "home"}>
+                  <PixelWorld
+                    avatar={profile.avatar}
+                    active={tab === "home"}
+                    onPick={(o, issue) => {
+                      setPlace({ room: ROOMS[o.room].name, roomId: o.room, object: o.name, issue });
+                      go("fix");
+                    }}
+                  />
+                </div>
+                <div role="tabpanel" id="panel-fix" aria-labelledby="tab-fix" hidden={tab !== "fix"}>
+                  <FixFlow place={place} clearPlace={() => setPlace(null)} onLog={logFix} />
+                </div>
+                <div role="tabpanel" id="panel-diary" aria-labelledby="tab-diary" hidden={tab !== "diary"}>
+                  <Diary fixes={fixes} setFixes={setFixes} />
+                </div>
+                <div role="tabpanel" id="panel-wrapped" aria-labelledby="tab-wrapped" hidden={tab !== "wrapped"}>
+                  <WrappedCard fixes={fixes} profile={profile} />
+                </div>
+              </main>
+            </div>
+          </div>
+        </div>
+        <footer className="mt-3 text-center text-xs muted">AI can make mistakes. With gas, electricity or brakes, call a professional.</footer>
+      </div>
+    </>
   );
 }
