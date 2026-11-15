@@ -65,6 +65,11 @@ export function PixelWorld({
   const [picked, setPicked] = useState<Placed | null>(null);
   const pickedRef = useRef<Placed | null>(null);
   pickedRef.current = picked;
+  // Moving an item that's already placed (by drag, the Move button, or the keyboard).
+  const [moving, setMoving] = useState<Placed | null>(null);
+  const movingRef = useRef<Placed | null>(null);
+  movingRef.current = moving;
+  const drag = useRef<{ d: Placed; offX: number; offY: number; started: boolean } | null>(null);
   const [message, setMessage] = useState("");
 
   // Rebuild the static layer and walking rules whenever the house changes.
@@ -153,7 +158,7 @@ export function PixelWorld({
       for (const d of live) if (d.y > p.y && Math.abs(d.x - p.x) <= 1) drawDecor(ctx, d.item, d.x * TILE, d.y * TILE, now);
 
       // placement preview
-      const item = placingRef.current;
+      const item = placingRef.current ?? movingRef.current?.item ?? null;
       if (item && ghost.current) {
         const [gx, gy] = ghost.current;
         const ok = canPlace(houseRef.current, item, gx, gy, [p.x, p.y]).ok;
@@ -284,6 +289,43 @@ export function PixelWorld({
     if (left <= 0) setPlacing(null);
   }
 
+  function startMove(d: Placed) {
+    // Take the item out of the house while it's being moved.
+    houseRef.current = { ...house, placed: house.placed.filter((x) => x.uid !== d.uid) };
+    blockedRef.current = blockedBy(houseRef.current.placed);
+    staticRef.current = null;
+    ghost.current = [d.x, d.y];
+    setPlacing(null);
+    setPicked(null);
+    setMoving(d);
+    setMessage(`Moving the ${ITEM[d.item].name.toLowerCase()}: tap a new spot, or use the arrow keys and Enter.`);
+  }
+
+  function cancelMove(reason?: string) {
+    houseRef.current = house;
+    blockedRef.current = blockedBy(house.placed);
+    staticRef.current = null;
+    ghost.current = null;
+    setMoving(null);
+    setMessage(reason ?? "Move cancelled.");
+  }
+
+  function dropAt(tx: number, ty: number): boolean {
+    const d = movingRef.current;
+    if (!d) return false;
+    const p = player.current;
+    const res = canPlace(houseRef.current, d.item, tx, ty, [p.x, p.y]);
+    if (!res.ok) {
+      setMessage(`Can't put it there: ${res.reason}`);
+      return false;
+    }
+    setHouse({ ...house, placed: house.placed.map((x) => (x.uid === d.uid ? { ...x, x: tx, y: ty } : x)) });
+    ghost.current = null;
+    setMoving(null);
+    setMessage(`Moved the ${ITEM[d.item].name.toLowerCase()}!`);
+    return true;
+  }
+
   function placeInFront() {
     const p = player.current;
     const [dx, dy] = DIRS[p.dir];
@@ -300,18 +342,25 @@ export function PixelWorld({
   function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     const [tx, ty] = tileFromEvent(e);
     if (placingRef.current) return placeAt(tx, ty);
+    if (movingRef.current) {
+      dropAt(tx, ty);
+      return;
+    }
     if (decorating) {
       const d = decorAt(houseRef.current.placed, tx, ty) ?? decorAt(houseRef.current.placed, tx, ty + 1);
       if (d) {
+        // select it now; it becomes a drag once the pointer moves to another tile
         setPicked(d);
-        setMessage(`${ITEM[d.item].name} selected.`);
+        setMessage(`${ITEM[d.item].name} selected. Drag it, or press Move.`);
+        drag.current = { d, offX: tx - d.x, offY: ty - d.y, started: false };
+        e.currentTarget.setPointerCapture(e.pointerId);
         return;
       }
     }
     const o = objectAt(tx, ty) ?? objectAt(tx, ty + 1); // tall things are drawn a bit above their tile
     if (o) return goTo(o);
     const p = player.current;
-    const route = findPath(p.x, p.y, [[tx, ty]]);
+    const route = findPath(p.x, p.y, [[tx, ty]], blockedRef.current);
     if (route && route.length) {
       target.current = null;
       path.current = route;
@@ -324,6 +373,22 @@ export function PixelWorld({
 
   function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
     const [tx, ty] = tileFromEvent(e);
+    const dr = drag.current;
+    if (dr) {
+      const nx = tx - dr.offX, ny = ty - dr.offY;
+      if (!dr.started && (nx !== dr.d.x || ny !== dr.d.y)) {
+        dr.started = true;
+        startMove(dr.d);
+      }
+      if (dr.started) ghost.current = [nx, ny];
+      e.currentTarget.style.cursor = "grabbing";
+      return;
+    }
+    if (movingRef.current) {
+      ghost.current = [tx, ty];
+      e.currentTarget.style.cursor = "move";
+      return;
+    }
     if (placingRef.current) {
       ghost.current = [tx, ty];
       e.currentTarget.style.cursor = "copy";
@@ -334,8 +399,39 @@ export function PixelWorld({
     e.currentTarget.style.cursor = hover.current ? "pointer" : "default";
   }
 
+  function onPointerUp() {
+    const dr = drag.current;
+    drag.current = null;
+    if (!dr?.started || !ghost.current) return;
+    const [gx, gy] = ghost.current;
+    if (!dropAt(gx, gy)) {
+      const p = player.current;
+      const res = canPlace(houseRef.current, dr.d.item, gx, gy, [p.x, p.y]);
+      cancelMove(res.ok ? undefined : `Can't put it there: ${res.reason} It went back where it was.`);
+    }
+  }
+
   function onKeyDown(e: React.KeyboardEvent) {
     const k = e.key.toLowerCase();
+    if (movingRef.current && ghost.current) {
+      const nudge: Record<string, [number, number]> = { arrowup: [0, -1], w: [0, -1], arrowdown: [0, 1], s: [0, 1], arrowleft: [-1, 0], a: [-1, 0], arrowright: [1, 0], d: [1, 0] };
+      if (nudge[k]) {
+        e.preventDefault();
+        const [gx, gy] = ghost.current;
+        ghost.current = [Math.max(0, Math.min(COLS - 1, gx + nudge[k][0])), Math.max(0, Math.min(ROWS - 1, gy + nudge[k][1]))];
+        return;
+      }
+      if (k === "enter" || k === " ") {
+        e.preventDefault();
+        dropAt(ghost.current[0], ghost.current[1]);
+        return;
+      }
+      if (k === "escape") {
+        e.preventDefault();
+        cancelMove();
+        return;
+      }
+    }
     const map: Record<string, Dir> = { arrowup: "up", w: "up", arrowdown: "down", s: "down", arrowleft: "left", a: "left", arrowright: "right", d: "right" };
     if (map[k]) {
       e.preventDefault();
@@ -367,6 +463,7 @@ export function PixelWorld({
             className={`btn btn-sm ${decorating ? "btn-primary" : ""}`}
             aria-pressed={decorating}
             onClick={() => {
+              if (movingRef.current) cancelMove();
               setDecorating((v) => !v);
               setPlacing(null);
               setPicked(null);
@@ -390,9 +487,18 @@ export function PixelWorld({
           className="pixelated block w-full touch-none select-none"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
           onPointerLeave={() => (hover.current = null)}
           aria-hidden
         />
+        {moving && (
+          <div className="absolute inset-x-2 top-2 flex items-center justify-between gap-2 rounded-md border-2 border-[var(--ink)] bg-[var(--paper)] px-2 py-1 text-xs font-bold">
+            <span>Moving the {ITEM[moving.item].name.toLowerCase()}: tap a spot, or arrows + Enter</span>
+            <button type="button" className="btn btn-sm px-2 text-xs" onClick={() => cancelMove()}>
+              Cancel
+            </button>
+          </div>
+        )}
         {placing && (
           <div className="absolute inset-x-2 top-2 flex items-center justify-between gap-2 rounded-md border-2 border-[var(--ink)] bg-[var(--paper)] px-2 py-1 text-xs font-bold">
             <span>Tap a spot to place the {ITEM[placing].name.toLowerCase()}</span>
@@ -445,6 +551,12 @@ export function PixelWorld({
           }}
           picked={picked}
           onPickUp={pickUp}
+          onMove={(d) => {
+            startMove(d);
+            const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            worldRef.current?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+            worldRef.current?.focus({ preventScroll: true });
+          }}
           message={message}
         />
       )}

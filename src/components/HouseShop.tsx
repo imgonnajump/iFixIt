@@ -13,6 +13,7 @@ export function HouseShop({
   onPlace,
   picked,
   onPickUp,
+  onMove,
   message,
 }: {
   house: House;
@@ -22,6 +23,7 @@ export function HouseShop({
   onPlace: (id: DecorId) => void;
   picked: Placed | null;
   onPickUp: (d: Placed) => void;
+  onMove: (d: Placed) => void;
   message: string;
 }) {
   const [tab, setTab] = useState<"shop" | "paint" | "placed">("shop");
@@ -72,6 +74,9 @@ export function HouseShop({
         <div className="flex items-center gap-3 rounded-lg border-2 border-[var(--focus)] bg-[var(--paper-2)] p-2">
           <DecorThumb id={picked.item} />
           <span className="flex-1 font-bold">{ITEM[picked.item].name}</span>
+          <button type="button" className="btn btn-sm btn-primary" onClick={() => onMove(picked)}>
+            Move
+          </button>
           <button type="button" className="btn btn-sm" onClick={() => onPickUp(picked)}>
             Pick up
           </button>
@@ -163,7 +168,10 @@ export function HouseShop({
             <li key={d.uid} className="flex items-center gap-3 py-2">
               <DecorThumb id={d.item} />
               <span className="flex-1 text-sm font-bold">{ITEM[d.item].name}</span>
-              <button type="button" className="btn btn-sm text-xs" onClick={() => onPickUp(d)}>
+              <button type="button" className="btn btn-sm text-xs" onClick={() => onMove(d)} aria-label={`Move ${ITEM[d.item].name}`}>
+                Move
+              </button>
+              <button type="button" className="btn btn-sm text-xs" onClick={() => onPickUp(d)} aria-label={`Pick up ${ITEM[d.item].name}`}>
                 Pick up
               </button>
             </li>

@@ -114,10 +114,13 @@ export function canPlace(house: House, item: DecorId, x: number, y: number, play
   }
   if (it.walkable) return { ok: true };
 
-  // Make sure every fixable thing can still be reached.
-  const blocked = blockedBy([...house.placed, { uid: "test", item, x, y }]);
-  const route = (o: (typeof FIXABLE)[number]) => findPath(player[0], player[1], standSpots(o, blocked), blocked);
-  if (FIXABLE.some((o) => !route(o))) return { ok: false, reason: "That would block the way to something." };
+  // Never cut off something that's reachable right now (compare before and after,
+  // so an already-awkward layout can still be fixed by moving things).
+  const reachable = (blocked: Set<number>) =>
+    new Set(FIXABLE.filter((o) => findPath(player[0], player[1], standSpots(o, blocked), blocked)).map((o) => o.id));
+  const before = reachable(blockedBy(house.placed));
+  const after = reachable(blockedBy([...house.placed, { uid: "test", item, x, y }]));
+  if ([...before].some((id) => !after.has(id))) return { ok: false, reason: "That would block the way to something." };
   return { ok: true };
 }
 

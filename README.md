@@ -7,7 +7,7 @@ Millions of easily fixable things are thrown away because people don't know what
 ## What it does
 **Your fix house**
 - 🏠 A walkable pixel house (bathroom, kitchen, utility room, living room, bedroom, garage). Walk to the broken thing with the arrow keys / WASD, the on-screen pad, or tap-to-walk, then pick what's wrong. Every object is also in a plain list, so keyboard and screen-reader users never need the game.
-- 🪙 **Decorate with coins you earn by fixing:** every fix pays coins (more for harder jobs, a bonus for DIY). Spend them on a cat, fish tank, arcade cabinet, rugs, plants and more, or repaint any room. The shop never lets you block a doorway or cut off something you'll need to fix.
+- 🪙 **Decorate with coins you earn by fixing:** every fix pays coins (more for harder jobs, a bonus for DIY). Spend them on a cat, fish tank, arcade cabinet, rugs, plants and more, or repaint any room. Drag furniture to rearrange it (or use Move and the arrow keys). The shop never lets you block a doorway or cut off something you'll need to fix.
 - 🧑‍🔧 An editable profile: name, mood, status and a pixel avatar you design (hair, skin, shirt, hat)
 - 📒 A fix diary: every repair is logged automatically, and you can add, edit or delete your own
 - 🎁 **Fixed Wrapped:** your year in repairs as story slides (fixes, $ saved, kg kept, your "repair persona", busiest month, toughest fix) with a shareable image. It unlocks every December, with a preview any time.
