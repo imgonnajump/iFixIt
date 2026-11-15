@@ -12,6 +12,9 @@ Millions of easily fixable items are thrown away because people don't know what 
 - 🧰 Tools and parts list, with a checklist of steps you can tick off
 - ⚡ Safety warnings, plus "stop and call a pro if…" checkpoints
 - 📍 Finds the nearest stores that sell the part, with distance and directions (OpenStreetMap, no key needed)
+- 🎯 Marks the exact spot for each step on your own photo
+- 🖼️ Real step-by-step photos from the matching iFixit guide
+- 👷 Finds nearby professionals (plumbers, electricians, bike mechanics, Repair Cafés…) with call and directions, plus Yelp and iFixit Answers links
 - ▶️ A how-to video for every step (inline with a YouTube API key, YouTube search otherwise)
 - 🔗 Links straight to iFixit repair guides for that part
 - ♻️ Estimates how much waste you kept out of landfill

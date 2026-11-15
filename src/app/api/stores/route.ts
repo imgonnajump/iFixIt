@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildQuery, parseOverpass, STORE_TYPES, type Store, type StoreType } from "@/lib/stores";
+import { buildQuery, parseOverpass, PLACE_TYPES, type PlaceType, type Store } from "@/lib/stores";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -41,8 +41,8 @@ export async function POST(req: Request) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
     return NextResponse.json({ error: "Invalid location" }, { status: 400 });
   }
-  const types = (Array.isArray(body.types) ? body.types : []).filter((t): t is StoreType =>
-    (STORE_TYPES as readonly string[]).includes(t as string),
+  const types = (Array.isArray(body.types) ? body.types : []).filter((t): t is PlaceType =>
+    (PLACE_TYPES as readonly string[]).includes(t as string),
   );
   if (types.length === 0) return NextResponse.json({ stores: [] });
 

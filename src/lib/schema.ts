@@ -1,5 +1,5 @@
 import * as z from "zod/v4";
-import { STORE_TYPES } from "./stores";
+import { PRO_TYPES, STORE_TYPES } from "./stores";
 
 export const DiagnosisSchema = z.object({
   can_diagnose: z
@@ -34,6 +34,14 @@ export const DiagnosisSchema = z.object({
       title: z.string(),
       detail: z.string(),
       caution: z.string().nullable(),
+      photo_marker: z
+        .object({
+          x: z.number().describe("Horizontal position as a fraction of image width, 0 = left edge, 1 = right edge"),
+          y: z.number().describe("Vertical position as a fraction of image height, 0 = top edge, 1 = bottom edge"),
+          label: z.string().describe("2-4 word name of what is at that spot, e.g. 'Shutoff valve'"),
+        })
+        .nullable()
+        .describe("The exact spot in the user's photo this step involves. null if that spot isn't visible in the photo or you're not sure."),
       video_search: z
         .string()
         .describe("Short YouTube search query for a video showing exactly this step, e.g. 'how to remove toilet flapper'. Include the item type."),
@@ -43,6 +51,9 @@ export const DiagnosisSchema = z.object({
   store_types: z
     .array(z.enum(STORE_TYPES))
     .describe("Kinds of local physical stores most likely to stock the parts and tools, best first (1-3). Empty if the parts are only sold online or by the manufacturer."),
+  pro_types: z
+    .array(z.enum(PRO_TYPES))
+    .describe("Kinds of local professionals who could do this repair, best first (1-2). Add repair_cafe when volunteers could fix it (small appliances, electronics, clothing, bikes, furniture)."),
   ifixit_search: z.string().describe("Best short search query for iFixit repair guides, e.g. 'toilet flapper replacement'"),
   waste_saved_kg: z.number().describe("Rough mass in kg of the item kept out of landfill by repairing instead of replacing"),
 });

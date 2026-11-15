@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import type { Diagnosis } from "@/lib/schema";
-import { NearbyStores } from "./NearbyStores";
+import { IfixitGuide } from "./IfixitGuide";
+import { NearbyPlaces } from "./NearbyPlaces";
+import { ProHelp } from "./ProHelp";
+import { StepPhoto } from "./StepPhoto";
 import { StepVideo } from "./StepVideo";
 
 const VERDICT = {
@@ -49,11 +52,13 @@ function savings(d: Diagnosis): { amount: number; vs: string } | null {
 export function Result({
   d,
   preview,
+  aspect,
   demo,
   onReset,
 }: {
   d: Diagnosis;
   preview: string | null;
+  aspect: number;
   demo: boolean;
   onReset: () => void;
 }) {
@@ -184,6 +189,9 @@ export function Result({
         </div>
       </div>
 
+      {/* Pro help first when it isn't safe to DIY */}
+      {d.verdict === "call_a_pro" && d.pro_types.length > 0 && <ProHelp types={d.pro_types} mustCall item={d.item} />}
+
       {/* Money */}
       <div className="fade-up rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200 dark:bg-stone-900 dark:ring-stone-800" style={{ animationDelay: "140ms" }}>
         {save && save.amount > 0 && (
@@ -252,7 +260,13 @@ export function Result({
 
       {/* Nearby stores */}
       {d.store_types.length > 0 && (d.parts.length > 0 || d.tools.length > 0) && (
-        <NearbyStores types={d.store_types} partName={d.parts[0]?.name ?? d.part_name} />
+        <NearbyPlaces
+          title="Where to buy it nearby"
+          icon="📍"
+          types={d.store_types}
+          buttonLabel="Find stores near me"
+          tip={`Call ahead to check they have the ${(d.parts[0]?.name ?? d.part_name).toLowerCase()} in stock. Bring the old part to match it.`}
+        />
       )}
 
       {/* Steps */}
@@ -289,6 +303,11 @@ export function Result({
                     )}
                   </span>
                 </button>
+                {s.photo_marker && preview && !isDone && (
+                  <div className="pl-11">
+                    <StepPhoto src={preview} aspect={aspect} x={s.photo_marker.x} y={s.photo_marker.y} label={s.photo_marker.label} />
+                  </div>
+                )}
                 {s.video_search && !isDone && (
                   <div className="pl-11">
                     <StepVideo query={s.video_search} />
@@ -307,6 +326,9 @@ export function Result({
         )}
       </Card>
 
+      {/* Real step photos from iFixit */}
+      <IfixitGuide query={d.ifixit_search} />
+
       {/* Stop signs */}
       {d.stop_and_call_pro_if.length > 0 && (
         <Card title="Stop and call a pro if…" icon="🛑">
@@ -320,6 +342,9 @@ export function Result({
           </ul>
         </Card>
       )}
+
+      {/* Pro help, for when DIY goes sideways */}
+      {d.verdict !== "call_a_pro" && d.pro_types.length > 0 && <ProHelp types={d.pro_types} mustCall={false} item={d.item} />}
 
       {/* Sticky action bar */}
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-stone-200 bg-white/90 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur dark:border-stone-800 dark:bg-stone-950/90">

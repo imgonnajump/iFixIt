@@ -32,7 +32,7 @@ const TIPS = [
 ];
 
 // Downscale to keep uploads small and fast (Claude works well at ~1568px long edge).
-async function compress(file: File): Promise<{ data: string; mediaType: string; preview: string }> {
+async function compress(file: File): Promise<{ data: string; mediaType: string; preview: string; aspect: number }> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, 1568 / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
@@ -40,13 +40,14 @@ async function compress(file: File): Promise<{ data: string; mediaType: string; 
   canvas.height = Math.round(bitmap.height * scale);
   canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   const preview = canvas.toDataURL("image/jpeg", 0.85);
-  return { data: preview.split(",")[1], mediaType: "image/jpeg", preview };
+  return { data: preview.split(",")[1], mediaType: "image/jpeg", preview, aspect: canvas.width / canvas.height };
 }
 
 export default function Home() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [aspect, setAspect] = useState(4 / 3);
   const [image, setImage] = useState<{ data: string; mediaType: string } | null>(null);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
@@ -59,8 +60,9 @@ export default function Home() {
     setError(null);
     setResult(null);
     try {
-      const { data, mediaType, preview } = await compress(file);
+      const { data, mediaType, preview, aspect } = await compress(file);
       setPreview(preview);
+      setAspect(aspect);
       setImage({ data, mediaType });
     } catch {
       setError("Couldn't read that image. Try a JPEG or PNG.");
@@ -121,7 +123,7 @@ export default function Home() {
 
       {loading && preview && <Loading preview={preview} />}
 
-      {!loading && result && <Result d={result} preview={preview} demo={demo} onReset={reset} />}
+      {!loading && result && <Result d={result} preview={preview} aspect={aspect} demo={demo} onReset={reset} />}
 
       {!loading && !result && !preview && (
         <section className="fade-up space-y-6">

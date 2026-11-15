@@ -1,4 +1,4 @@
-// Store lookup via OpenStreetMap (Overpass API). Free, no API key.
+// Store and professional lookup via OpenStreetMap (Overpass API). Free, no API key.
 
 export const STORE_TYPES = [
   "hardware",
@@ -11,7 +11,24 @@ export const STORE_TYPES = [
 ] as const;
 export type StoreType = (typeof STORE_TYPES)[number];
 
-export const STORE_LABELS: Record<StoreType, string> = {
+export const PRO_TYPES = [
+  "plumber",
+  "electrician",
+  "hvac",
+  "appliance_repair",
+  "device_repair",
+  "bike_mechanic",
+  "auto_mechanic",
+  "locksmith",
+  "carpenter",
+  "repair_cafe",
+] as const;
+export type ProType = (typeof PRO_TYPES)[number];
+
+export const PLACE_TYPES = [...STORE_TYPES, ...PRO_TYPES] as const;
+export type PlaceType = StoreType | ProType;
+
+export const PLACE_LABELS: Record<PlaceType, string> = {
   hardware: "Hardware store",
   electronics: "Electronics store",
   bicycle: "Bike shop",
@@ -19,10 +36,20 @@ export const STORE_LABELS: Record<StoreType, string> = {
   appliance_parts: "Appliance parts store",
   phone_repair: "Phone & device repair",
   home_goods: "Home goods store",
+  plumber: "Plumber",
+  electrician: "Electrician",
+  hvac: "Heating & AC technician",
+  appliance_repair: "Appliance repair",
+  device_repair: "Phone & computer repair",
+  bike_mechanic: "Bike mechanic",
+  auto_mechanic: "Auto mechanic",
+  locksmith: "Locksmith",
+  carpenter: "Carpenter",
+  repair_cafe: "Repair Café (free, volunteer-run)",
 };
 
-// OpenStreetMap tags for each store type.
-const TAGS: Record<StoreType, [string, string][]> = {
+// OpenStreetMap tags for each place type.
+const TAGS: Record<PlaceType, [string, string][]> = {
   hardware: [["shop", "hardware"], ["shop", "doityourself"], ["shop", "trade"]],
   electronics: [["shop", "electronics"], ["shop", "computer"]],
   bicycle: [["shop", "bicycle"]],
@@ -30,11 +57,21 @@ const TAGS: Record<StoreType, [string, string][]> = {
   appliance_parts: [["shop", "appliance"], ["shop", "electrical"]],
   phone_repair: [["shop", "mobile_phone"], ["craft", "electronics_repair"], ["shop", "repair"]],
   home_goods: [["shop", "houseware"], ["shop", "department_store"], ["shop", "variety_store"]],
+  plumber: [["craft", "plumber"]],
+  electrician: [["craft", "electrician"]],
+  hvac: [["craft", "hvac"]],
+  appliance_repair: [["craft", "electronics_repair"], ["craft", "appliance_repair"]],
+  device_repair: [["craft", "electronics_repair"], ["shop", "mobile_phone"], ["shop", "computer"]],
+  bike_mechanic: [["shop", "bicycle"]],
+  auto_mechanic: [["shop", "car_repair"]],
+  locksmith: [["shop", "locksmith"], ["craft", "locksmith"]],
+  carpenter: [["craft", "carpenter"]],
+  repair_cafe: [["repair_cafe", "yes"]],
 };
 
 export type Store = {
   name: string;
-  type: StoreType;
+  type: PlaceType;
   lat: number;
   lon: number;
   distanceKm: number;
@@ -44,7 +81,7 @@ export type Store = {
   website: string | null;
 };
 
-export function buildQuery(types: StoreType[], lat: number, lon: number, radiusM: number): string {
+export function buildQuery(types: PlaceType[], lat: number, lon: number, radiusM: number): string {
   const parts = types.flatMap((t) =>
     TAGS[t].map(([k, v]) => `nwr["${k}"="${v}"]["name"](around:${radiusM},${lat},${lon});`),
   );
@@ -67,14 +104,14 @@ type OverpassElement = {
   tags?: Record<string, string>;
 };
 
-function typeOf(tags: Record<string, string>, wanted: StoreType[]): StoreType | null {
+function typeOf(tags: Record<string, string>, wanted: PlaceType[]): PlaceType | null {
   for (const t of wanted) {
     if (TAGS[t].some(([k, v]) => tags[k] === v)) return t;
   }
   return null;
 }
 
-export function parseOverpass(json: { elements?: OverpassElement[] }, wanted: StoreType[], lat: number, lon: number, limit = 6): Store[] {
+export function parseOverpass(json: { elements?: OverpassElement[] }, wanted: PlaceType[], lat: number, lon: number, limit = 6): Store[] {
   const seen = new Set<string>();
   const stores: Store[] = [];
   for (const el of json.elements ?? []) {
