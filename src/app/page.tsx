@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Diagnosis } from "@/lib/schema";
 import { PrimaryButton, Result } from "@/components/Result";
+import { loadFixes, totals, type Fix } from "@/lib/fixlog";
+import { prepareImage } from "@/lib/image";
 
 const EXAMPLES = [
   { icon: "🚽", text: "Toilet keeps running" },
@@ -31,39 +33,32 @@ const TIPS = [
   "Over 60 million tonnes of e-waste are thrown away every year. Repair beats recycling.",
 ];
 
-// Downscale to keep uploads small and fast (Claude works well at ~1568px long edge).
-async function compress(file: File): Promise<{ data: string; mediaType: string; preview: string; aspect: number }> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 1568 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  const preview = canvas.toDataURL("image/jpeg", 0.85);
-  return { data: preview.split(",")[1], mediaType: "image/jpeg", preview, aspect: canvas.width / canvas.height };
-}
-
 export default function Home() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [aspect, setAspect] = useState(4 / 3);
-  const [image, setImage] = useState<{ data: string; mediaType: string } | null>(null);
+  const [image, setImage] = useState<{ data: string; mediaType: string; grid: string } | null>(null);
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Diagnosis | null>(null);
   const [demo, setDemo] = useState(false);
+  const [fixes, setFixes] = useState<Fix[]>([]);
+
+  useEffect(() => {
+    setFixes(loadFixes());
+  }, [result]);
 
   async function onFile(file: File | undefined) {
     if (!file) return;
     setError(null);
     setResult(null);
     try {
-      const { data, mediaType, preview, aspect } = await compress(file);
+      const { data, grid, preview, aspect } = await prepareImage(file);
       setPreview(preview);
       setAspect(aspect);
-      setImage({ data, mediaType });
+      setImage({ data, mediaType: "image/jpeg", grid });
     } catch {
       setError("Couldn't read that image. Try a JPEG or PNG.");
     }
@@ -78,7 +73,7 @@ export default function Home() {
       const res = await fetch("/api/diagnose", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: image.data, mediaType: image.mediaType, note }),
+        body: JSON.stringify({ image: image.data, mediaType: image.mediaType, note, lang: navigator.language }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error ?? "Something went wrong.");
@@ -123,7 +118,7 @@ export default function Home() {
 
       {loading && preview && <Loading preview={preview} />}
 
-      {!loading && result && <Result d={result} preview={preview} aspect={aspect} demo={demo} onReset={reset} />}
+      {!loading && result && <Result d={result} preview={preview} aspect={aspect} grid={image?.grid ?? null} demo={demo} onReset={reset} />}
 
       {!loading && !result && !preview && (
         <section className="fade-up space-y-6">
@@ -155,6 +150,8 @@ export default function Home() {
             🖼️ Choose from gallery
           </button>
 
+          {fixes.length > 0 && <ImpactCard fixes={fixes} />}
+
           <div>
             <p className="mb-2 text-sm font-medium text-stone-500">Works on things like</p>
             <div className="flex flex-wrap gap-2">
@@ -170,7 +167,7 @@ export default function Home() {
             {[
               { n: "1", icon: "📸", t: "Snap it" },
               { n: "2", icon: "🔍", t: "We name the part" },
-              { n: "3", icon: "🛠️", t: "Fix it yourself" },
+              { n: "3", icon: "✅", t: "We check your work" },
             ].map((s) => (
               <div key={s.n} className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-stone-200 dark:bg-stone-900 dark:ring-stone-800">
                 <p className="text-2xl">{s.icon}</p>
@@ -274,6 +271,32 @@ function Loading({ preview }: { preview: string }) {
         <p className="mt-1 text-stone-600 dark:text-stone-300">{tip}</p>
       </div>
     </section>
+  );
+}
+
+function ImpactCard({ fixes }: { fixes: Fix[] }) {
+  const t = totals(fixes);
+  return (
+    <div className="rounded-3xl bg-emerald-600 p-5 text-white shadow-lg shadow-emerald-600/20">
+      <p className="text-sm font-semibold opacity-90">♻️ Your repair impact</p>
+      <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+        <div>
+          <p className="text-2xl font-extrabold">{t.count}</p>
+          <p className="text-xs opacity-85">{t.count === 1 ? "fix" : "fixes"}</p>
+        </div>
+        <div>
+          <p className="text-2xl font-extrabold">${t.saved.toLocaleString()}</p>
+          <p className="text-xs opacity-85">saved</p>
+        </div>
+        <div>
+          <p className="text-2xl font-extrabold">{t.kg} kg</p>
+          <p className="text-xs opacity-85">kept from landfill</p>
+        </div>
+      </div>
+      <p className="mt-3 truncate text-xs opacity-80">
+        Latest: {fixes[0].part} ({fixes[0].item})
+      </p>
+    </div>
   );
 }
 

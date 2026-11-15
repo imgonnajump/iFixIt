@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { cleanBox, type Box } from "@/lib/image";
 import type { Diagnosis } from "@/lib/schema";
+import { addFix, totals } from "@/lib/fixlog";
+import { savings } from "@/lib/money";
+import { CheckWork } from "./CheckWork";
+import { HandsFree } from "./HandsFree";
 import { IfixitGuide } from "./IfixitGuide";
 import { NearbyPlaces } from "./NearbyPlaces";
 import { ProHelp } from "./ProHelp";
-import { StepPhoto } from "./StepPhoto";
+import { StepPhoto, StepPhotoSkeleton } from "./StepPhoto";
 import { StepVideo } from "./StepVideo";
 
 const VERDICT = {
@@ -29,42 +34,76 @@ const VERDICT = {
   },
 } as const;
 
-// "$120-200" -> 160. Returns null if no number found.
-function midpoint(s: string): number | null {
-  const nums = (s.replace(/,/g, "").match(/\d+(\.\d+)?/g) ?? []).map(Number).slice(0, 2);
-  if (nums.length === 0) return null;
-  return nums.reduce((a, b) => a + b, 0) / nums.length;
-}
-
-function savings(d: Diagnosis): { amount: number; vs: string } | null {
-  const diy = midpoint(d.diy_cost);
-  const pro = midpoint(d.pro_cost);
-  const replace = midpoint(d.replace_cost);
-  if (d.verdict === "call_a_pro") {
-    if (pro != null && replace != null && replace > pro) return { amount: Math.round(replace - pro), vs: "buying new" };
-    return null;
-  }
-  const best = Math.max(pro ?? 0, replace ?? 0);
-  if (diy != null && best > diy) return { amount: Math.round(best - diy), vs: pro != null && pro >= (replace ?? 0) ? "hiring a pro" : "buying new" };
-  return null;
-}
 
 export function Result({
   d,
   preview,
   aspect,
+  grid,
   demo,
   onReset,
 }: {
   d: Diagnosis;
   preview: string | null;
   aspect: number;
+  grid: string | null;
   demo: boolean;
   onReset: () => void;
 }) {
   const [done, setDone] = useState<Set<number>>(new Set());
   const [have, setHave] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
+  const [impact, setImpact] = useState<ReturnType<typeof totals> | null>(null);
+  const logged = useRef(false);
+  // Where each step's part is on the photo: undefined = still looking.
+  const [marks, setMarks] = useState<Record<string, Box | null> | undefined>(undefined);
+
+  const lookFor = d.can_diagnose ? [...new Set(d.steps.map((s) => s.look_for).filter((l): l is string => Boolean(l)))] : [];
+  const lookKey = lookFor.join("|");
+
+  useEffect(() => {
+    if (!grid || demo || !lookKey) {
+      setMarks({});
+      return;
+    }
+    let alive = true;
+    const labels = lookKey.split("|");
+    fetch("/api/locate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ grid, labels, item: d.item }),
+    })
+      .then((r) => r.json())
+      .then((j: { marks?: ({ label: string; found: boolean } & Box)[] }) => {
+        if (!alive) return;
+        const out: Record<string, Box | null> = {};
+        labels.forEach((label, i) => {
+          const m = j.marks?.find((x) => x.label === label) ?? j.marks?.[i];
+          out[label] = m && m.found ? cleanBox(m) : null;
+        });
+        setMarks(out);
+      })
+      .catch(() => alive && setMarks({}));
+    return () => {
+      alive = false;
+    };
+  }, [grid, demo, lookKey, d.item]);
+
+  const save = savings(d);
+  const allDone = d.can_diagnose && d.steps.length > 0 && done.size === d.steps.length;
+
+  useEffect(() => {
+    if (!allDone || logged.current || demo) return;
+    logged.current = true;
+    const list = addFix({
+      item: d.item,
+      part: d.part_name,
+      saved: save?.amount ?? 0,
+      kg: d.waste_saved_kg,
+      date: new Date().toISOString(),
+    });
+    setImpact(totals(list));
+  }, [allDone, demo, d.item, d.part_name, d.waste_saved_kg, save?.amount]);
 
   if (!d.can_diagnose) {
     return (
@@ -86,10 +125,9 @@ export function Result({
   }
 
   const v = VERDICT[d.verdict];
-  const save = savings(d);
   const ifixit = `https://www.ifixit.com/Search?query=${encodeURIComponent(d.ifixit_search)}`;
-  const allDone = d.steps.length > 0 && done.size === d.steps.length;
   const pct = d.steps.length ? Math.round((done.size / d.steps.length) * 100) : 0;
+
 
   const toggleStep = (i: number) => {
     const next = new Set(done);
@@ -270,7 +308,29 @@ export function Result({
       )}
 
       {/* Steps */}
-      <Card title="Step by step" icon="📋" action={<span className="text-sm font-semibold text-orange-600">{done.size}/{d.steps.length}</span>}>
+      <Card
+        title="Step by step"
+        icon="📋"
+        action={
+          <span className="flex items-center gap-2">
+            <HandsFree
+              steps={d.steps}
+              done={done}
+              onDone={(i) => setDone((prev) => new Set(prev).add(i))}
+              onUndo={(i) =>
+                setDone((prev) => {
+                  const next = new Set(prev);
+                  next.delete(i);
+                  return next;
+                })
+              }
+            />
+            <span className="text-sm font-semibold text-orange-600">
+              {done.size}/{d.steps.length}
+            </span>
+          </span>
+        }
+      >
         <div className="mb-4 h-2 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
           <div className="h-full rounded-full bg-orange-500 transition-all duration-500" style={{ width: `${pct}%` }} />
         </div>
@@ -303,9 +363,31 @@ export function Result({
                     )}
                   </span>
                 </button>
-                {s.photo_marker && preview && !isDone && (
+                {s.look_for && preview && !isDone && (marks === undefined || marks[s.look_for]) && (
                   <div className="pl-11">
-                    <StepPhoto src={preview} aspect={aspect} x={s.photo_marker.x} y={s.photo_marker.y} label={s.photo_marker.label} />
+                    {marks === undefined ? (
+                      <StepPhotoSkeleton />
+                    ) : (
+                      <StepPhoto src={preview} aspect={aspect} box={marks[s.look_for]!} label={s.look_for} />
+                    )}
+                  </div>
+                )}
+                {isNext && (
+                  <div className="pl-11">
+                    <CheckWork
+                      key={i}
+                      context={{
+                        item: d.item,
+                        part: d.part_name,
+                        problem: d.problem,
+                        stepIndex: i,
+                        totalSteps: d.steps.length,
+                        step: { title: s.title, detail: s.detail, caution: s.caution },
+                        nextStep: d.steps[i + 1]?.title ?? null,
+                        lang: navigator.language,
+                      }}
+                      onPassed={() => setDone((prev) => new Set(prev).add(i))}
+                    />
                   </div>
                 )}
                 {s.video_search && !isDone && (
@@ -322,6 +404,11 @@ export function Result({
             <p className="text-3xl">🎉</p>
             <p className="font-bold">You fixed it!</p>
             <p className="text-sm opacity-90">~{d.waste_saved_kg} kg kept out of landfill. Nice work.</p>
+            {impact && impact.count > 1 && (
+              <p className="mt-2 rounded-xl bg-white/15 px-3 py-2 text-sm font-medium">
+                Your total: {impact.count} fixes · ${impact.saved.toLocaleString()} saved · {impact.kg} kg kept out of landfill
+              </p>
+            )}
           </div>
         )}
       </Card>

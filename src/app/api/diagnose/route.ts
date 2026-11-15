@@ -1,14 +1,13 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
+import { apiError, hasKey, IMAGE_TYPES, MODEL, type ImageType } from "@/lib/claude";
 import { DiagnosisSchema } from "@/lib/schema";
 import { SAMPLE_DIAGNOSIS } from "@/lib/sample";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
-type MediaType = (typeof MEDIA_TYPES)[number];
 
 const SYSTEM = `You are FixCam, a veteran repair technician who has fixed everything from toilets and bikes to laptops and car dashboards.
 A user sends a photo of something broken (and maybe a short note). Your job:
@@ -17,13 +16,19 @@ A user sends a photo of something broken (and maybe a short note). Your job:
 3. Decide honestly whether this is an easy DIY fix, DIY with care, or a job for a professional. Choose call_a_pro for anything involving gas lines, mains wiring inside walls, swollen lithium batteries, airbags, brakes on cars, refrigerant, or structural work.
 4. List the exact tools and parts, with realistic US prices, and the kinds of local stores that stock them.
 5. Give clear numbered steps a first-timer can follow. Always start with the safety step (unplug, shut off water, turn off breaker, etc.) when relevant.
-6. For each step, if the spot it involves is visible in the photo, mark it with photo_marker so the user knows exactly where to look. Be precise, and use null rather than guess.
+6. For each step, set look_for to the part in the photo that step works on, with a visual cue (color, material, position) so it can be highlighted. Use null if that part isn't visible.
 7. Name the kind of local professional who could do the job, in case the user gets stuck.
 Be specific, practical and concise. Never invent certainty: if the photo is unclear, set can_diagnose to false or confidence to low and ask for what you need.
 For a dashboard warning light, identify the light, explain what it means, and say whether it is safe to keep driving.`;
 
+// Answer in the user's device language (search queries stay searchable).
+function languageRule(lang: unknown) {
+  if (typeof lang !== "string" || !/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$/.test(lang) || /^en\b/i.test(lang)) return "";
+  return `\nWrite every text field in the user's language (BCP 47 code "${lang}"). Keep ifixit_search in English.`;
+}
+
 export async function POST(req: Request) {
-  let body: { image?: string; mediaType?: string; note?: string };
+  let body: { image?: string; mediaType?: string; note?: string; lang?: string };
   try {
     body = await req.json();
   } catch {
@@ -31,12 +36,12 @@ export async function POST(req: Request) {
   }
 
   const { image, mediaType, note } = body;
-  if (!image || !mediaType || !MEDIA_TYPES.includes(mediaType as MediaType)) {
+  if (!image || !mediaType || !IMAGE_TYPES.includes(mediaType as ImageType)) {
     return NextResponse.json({ error: "Send a JPEG, PNG, WebP or GIF photo." }, { status: 400 });
   }
 
   // Demo mode: lets the UI run with no API key (useful for judging / offline demos).
-  if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
+  if (!hasKey()) {
     return NextResponse.json({ diagnosis: SAMPLE_DIAGNOSIS, demo: true });
   }
 
@@ -44,7 +49,7 @@ export async function POST(req: Request) {
 
   try {
     const response = await client.beta.messages.parse({
-      model: "claude-opus-5-5",
+      model: MODEL,
       max_tokens: 16000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
@@ -52,14 +57,14 @@ export async function POST(req: Request) {
         effort: "medium",
         format: betaZodOutputFormat(DiagnosisSchema),
       },
-      system: SYSTEM,
+      system: SYSTEM + languageRule(body.lang),
       messages: [
         {
           role: "user",
           content: [
             {
               type: "image",
-              source: { type: "base64", media_type: mediaType as MediaType, data: image },
+              source: { type: "base64", media_type: mediaType as ImageType, data: image },
             },
             {
               type: "text",
@@ -83,21 +88,6 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ diagnosis: response.parsed_output });
   } catch (error) {
-    if (error instanceof Anthropic.RateLimitError) {
-      return NextResponse.json({ error: "Too many requests. Wait a few seconds." }, { status: 429 });
-    }
-    if (error instanceof Anthropic.BadRequestError) {
-      console.error("Bad request:", error.message);
-      return NextResponse.json(
-        { error: "The AI service rejected the request. Check the server log (bad image, or API account out of credits)." },
-        { status: 400 },
-      );
-    }
-    if (error instanceof Anthropic.APIError) {
-      console.error(`API error ${error.status}:`, error.message);
-      return NextResponse.json({ error: "The AI service had a problem. Try again." }, { status: 502 });
-    }
-    console.error(error);
-    return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
+    return apiError(error);
   }
 }

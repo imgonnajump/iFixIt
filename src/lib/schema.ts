@@ -34,14 +34,10 @@ export const DiagnosisSchema = z.object({
       title: z.string(),
       detail: z.string(),
       caution: z.string().nullable(),
-      photo_marker: z
-        .object({
-          x: z.number().describe("Horizontal position as a fraction of image width, 0 = left edge, 1 = right edge"),
-          y: z.number().describe("Vertical position as a fraction of image height, 0 = top edge, 1 = bottom edge"),
-          label: z.string().describe("2-4 word name of what is at that spot, e.g. 'Shutoff valve'"),
-        })
+      look_for: z
+        .string()
         .nullable()
-        .describe("The exact spot in the user's photo this step involves. null if that spot isn't visible in the photo or you're not sure."),
+        .describe("The one part in the user's photo this step works on, described so it can be found and highlighted (2-6 words with a visual cue, e.g. 'red rubber flapper', 'chrome shutoff valve under tank'). null if that part isn't visible in the photo."),
       video_search: z
         .string()
         .describe("Short YouTube search query for a video showing exactly this step, e.g. 'how to remove toilet flapper'. Include the item type."),
